@@ -3,10 +3,12 @@ import { useWallet } from '../lib/WalletContext';
 import { Connection } from '@solana/web3.js';
 import { URDecoder } from '@ngraveio/bc-ur';
 import WorkerScript from '../lib/worker?worker';
+import { decryptPayload } from '../lib/crypto';
+import { extractDataFromGif } from '../lib/gifManager';
 
 export default function Receiver({ onBack }: { onBack: () => void }) {
-  const { isOnline, setPendingTx, refreshState } = useWallet();
-  const [phase, setPhase] = useState<'scan' | 'success'>('scan');
+  const { keypair, isOnline, setPendingTx, refreshState } = useWallet();
+  const [phase, setPhase] = useState<'select' | 'scan' | 'success'>('select');
   const [scanProgress, setScanProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   
@@ -23,8 +25,25 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
       decoderRef.current = new URDecoder();
       startCamera();
     }
-    return () => stopCamera();
+    return () => {
+      if (phase === 'scan') stopCamera();
+    };
   }, [phase]);
+
+  const handleGifUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!keypair) return;
+    if (e.target.files && e.target.files[0]) {
+      setErrorMsg('');
+      try {
+        const file = e.target.files[0];
+        const encryptedData = await extractDataFromGif(file);
+        const rawTx = await decryptPayload(keypair.secretKey, encryptedData);
+        await processTransaction(rawTx);
+      } catch (err: any) {
+        setErrorMsg("Failed to decode GIF: " + err.message);
+      }
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -85,7 +104,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
   };
 
   const onDecodedQR = async (bytes: Uint8Array) => {
-    if (doneRef.current || !decoderRef.current) return;
+    if (doneRef.current || !decoderRef.current || !keypair) return;
     
     try {
       const qrString = new TextDecoder().decode(bytes);
@@ -99,10 +118,15 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
           doneRef.current = true;
           setScanProgress(100);
           const ur = decoderRef.current.resultUR();
-          const rawTxBuffer = ur.decodeCBOR(); // Returns Buffer
-          const rawTx = new Uint8Array(rawTxBuffer);
           
-          await processTransaction(rawTx);
+          try {
+            const encryptedData = new Uint8Array(ur.decodeCBOR());
+            const rawTx = await decryptPayload(keypair.secretKey, encryptedData);
+            await processTransaction(rawTx);
+          } catch (decryptErr: any) {
+            setErrorMsg("Decryption failed. This transaction was not meant for this wallet!");
+            setPhase('select');
+          }
         } else {
           setErrorMsg("Failed to decode UR data.");
           decoderRef.current = new URDecoder();
@@ -142,12 +166,27 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
     <div className="flex-col">
       <h2>Receive SOL</h2>
       <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>
-        Status: <strong style={{ color: isOnline ? 'var(--accent-color)' : '#ffa500' }}>
+        Network: <strong style={{ color: isOnline ? 'var(--accent-color)' : '#ffa500' }}>
           {isOnline ? 'Online (Broadcasts immediately)' : 'Offline (Saves to Pending Tx)'}
         </strong>
       </p>
 
-      {errorMsg && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{errorMsg}</div>}
+      {errorMsg && <div style={{ color: 'var(--danger)', marginBottom: '1rem', padding: '1rem', background: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>{errorMsg}</div>}
+
+      {phase === 'select' && (
+        <div className="card">
+          <p>How would you like to receive the transaction?</p>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setPhase('scan')}>
+              Scan Camera QR
+            </button>
+            <label className="btn" style={{ flex: 1, display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
+              Load Meme-GIF File
+              <input type="file" accept="image/gif" hidden onChange={handleGifUpload} />
+            </label>
+          </div>
+        </div>
+      )}
 
       {phase === 'scan' && (
         <div className="card">
@@ -160,13 +199,14 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
             <div style={{ background: 'var(--accent-color)', height: '10px', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
           </div>
           <p className="mt-1 text-center">{scanProgress.toFixed(0)}% Received</p>
+          <button className="btn mt-2" style={{ width: '100%' }} onClick={() => setPhase('select')}>Cancel</button>
         </div>
       )}
 
       {phase === 'success' && (
         <div className="text-center card">
           <div style={{ color: 'var(--accent-color)', fontSize: '4rem', marginBottom: '1rem' }}>✓</div>
-          <h3>Transfer Received!</h3>
+          <h3>Transaction Decrypted & Ready!</h3>
           <p>
             {isOnline 
               ? "Transaction has been broadcasted to the network." 
