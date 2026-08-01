@@ -124,12 +124,21 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         lastDraw = now;
         
         if (encoderRef.current && canvasRef.current) {
-          const part = encoderRef.current.nextPart();
-          await QRCode.toCanvas(canvasRef.current, part.toUpperCase(), {
-            width: 300,
-            margin: 2,
-            errorCorrectionLevel: 'L'
-          });
+          try {
+            const part = encoderRef.current.nextPart();
+            await new Promise<void>((resolve, reject) => {
+              QRCode.toCanvas(canvasRef.current, part.toUpperCase(), {
+                width: 300,
+                margin: 2,
+                errorCorrectionLevel: 'L'
+              }, (err) => {
+                if (err) reject(err);
+                else resolve();
+              });
+            });
+          } catch (err) {
+            console.error("QR Code Generation Error:", err);
+          }
         }
       };
       
