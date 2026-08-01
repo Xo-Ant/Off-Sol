@@ -16,7 +16,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const [asset, setAsset] = useState('SOL');
   const [error, setError] = useState('');
   
-  const [phase, setPhase] = useState<'form' | 'method_select' | 'camera_qr' | 'gif_select' | 'success'>('form');
+  const [phase, setPhase] = useState<'form' | 'method_select' | 'qr_transition' | 'camera_qr' | 'gif_select' | 'success'>('form');
   const [encryptedData, setEncryptedData] = useState<Uint8Array | null>(null);
   const [rawTxData, setRawTxData] = useState<Uint8Array | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -137,7 +137,10 @@ export default function Sender({ onBack }: { onBack: () => void }) {
     if (!encryptedData) return;
     const ur = UR.fromBuffer(Buffer.from(encryptedData));
     encoderRef.current = new UREncoder(ur, 150);
-    setPhase('camera_qr');
+    setPhase('qr_transition');
+    setTimeout(() => {
+      setPhase('camera_qr');
+    }, 1400);
   };
 
   const handleSelectGif = async (gif: MemeGif) => {
@@ -188,6 +191,10 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               QRCode.toCanvas(canvasRef.current, part.toUpperCase(), {
                 width: 300,
                 margin: 2,
+                color: {
+                  dark: '#05050a',
+                  light: '#00f0ff'
+                },
                 errorCorrectionLevel: 'L'
               }, (err) => {
                 if (err) reject(err);
@@ -211,7 +218,9 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   return (
     <div className="screen-container">
       <div className="media-pane">
-        {phase === 'camera_qr' ? (
+        {phase === 'qr_transition' ? (
+          <div className="qr-explode-text">OFF-SOL</div>
+        ) : phase === 'camera_qr' ? (
           <div className="qr-container">
             <canvas ref={canvasRef}></canvas>
           </div>
