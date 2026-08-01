@@ -14,8 +14,10 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   
-  const [phase, setPhase] = useState<'form' | 'method_select' | 'camera_qr' | 'gif_select'>('form');
+  const [phase, setPhase] = useState<'form' | 'method_select' | 'camera_qr' | 'gif_select' | 'success'>('form');
   const [encryptedData, setEncryptedData] = useState<Uint8Array | null>(null);
+  const [rawTxData, setRawTxData] = useState<Uint8Array | null>(null);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [gifs, setGifs] = useState<MemeGif[]>([]);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +85,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
       
       const encrypted = await encryptForReceiver(keypair.secretKey, toPubkey, rawTx);
       setEncryptedData(encrypted);
+      setRawTxData(rawTx);
       
       setPhase('method_select');
     } catch (e: any) {
@@ -109,6 +112,21 @@ export default function Sender({ onBack }: { onBack: () => void }) {
     } catch(e: any) {
       setError("Failed to generate/share GIF: " + e.message);
     }
+  };
+
+  const handleDirectBroadcast = async () => {
+    if (!rawTxData) return;
+    setIsBroadcasting(true);
+    setError('');
+    try {
+      const conn = new Connection('https://api.devnet.solana.com');
+      const signature = await conn.sendRawTransaction(rawTxData, { skipPreflight: true });
+      console.log("Broadcasted:", signature);
+      setPhase('success');
+    } catch (e: any) {
+      setError("Broadcast failed: " + e.message);
+    }
+    setIsBroadcasting(false);
   };
 
   useEffect(() => {
@@ -157,6 +175,10 @@ export default function Sender({ onBack }: { onBack: () => void }) {
           <div className="qr-container">
             <canvas ref={canvasRef}></canvas>
           </div>
+        ) : phase === 'success' ? (
+          <div className="media-placeholder" style={{ color: '#00cc00' }}>
+            SUCCESS!
+          </div>
         ) : (
           <div className="media-placeholder">
             {phase === 'form' ? 'Awaiting Input...' : (phase === 'gif_select' ? 'Select GIF' : 'Processing...')}
@@ -187,8 +209,20 @@ export default function Sender({ onBack }: { onBack: () => void }) {
           <div className="flex-col">
             <h3 style={{ color: '#00cc00' }}>Encrypted!</h3>
             <p>How would you like to send it?</p>
-            <button className="win-btn" style={{ width: '100%' }} onClick={handleStartCameraQR}>Show QR Code</button>
-            <button className="win-btn" style={{ width: '100%' }} onClick={() => setPhase('gif_select')}>Hide in Meme GIF</button>
+            
+            {isOnline && (
+              <button 
+                className="win-btn" 
+                style={{ width: '100%', backgroundColor: '#00aa00', borderColor: '#00ff00', color: 'white', marginBottom: '15px' }} 
+                onClick={handleDirectBroadcast}
+                disabled={isBroadcasting}
+              >
+                {isBroadcasting ? 'Broadcasting...' : 'Direct Broadcast (Online)'}
+              </button>
+            )}
+
+            <button className="win-btn" style={{ width: '100%' }} onClick={handleStartCameraQR}>Show QR Code (Offline)</button>
+            <button className="win-btn" style={{ width: '100%' }} onClick={() => setPhase('gif_select')}>Hide in Meme GIF (Offline)</button>
             <button className="win-btn" style={{ width: '100%', backgroundColor: '#555' }} onClick={() => setPhase('form')}>Cancel</button>
           </div>
         )}
@@ -217,6 +251,14 @@ export default function Sender({ onBack }: { onBack: () => void }) {
           <div className="text-center flex-col">
             <p>Scan the Animated QR above with the Receiver.</p>
             <button className="win-btn mt-1" onClick={() => setPhase('method_select')}>Cancel</button>
+          </div>
+        )}
+
+        {phase === 'success' && (
+          <div className="text-center flex-col">
+            <h2 style={{ color: '#00cc00', margin: '10px 0' }}>SUCCESS</h2>
+            <p>Transaction broadcasted directly to the network!</p>
+            <button className="win-btn" style={{ width: '100%', marginTop: '15px' }} onClick={onBack}>OK</button>
           </div>
         )}
       </div>
