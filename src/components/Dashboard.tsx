@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWallet } from '../lib/WalletContext';
 import bs58 from 'bs58';
+import PixelLogo from './PixelLogo';
 
 export default function Dashboard({ onSend, onReceive }: { onSend: () => void, onReceive: () => void }) {
   const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout } = useWallet();
@@ -24,7 +25,7 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
     <>
       <div className="screen-container">
         <div className="media-pane">
-          <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '80%', objectFit: 'contain' }} />
+          <PixelLogo />
         </div>
         
         <div className="controls-pane">

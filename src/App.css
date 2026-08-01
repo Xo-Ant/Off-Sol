@@ -33,6 +33,12 @@ body {
   flex-direction: column;
 }
 
+@keyframes pixel-blink {
+  0% { opacity: 1; filter: brightness(1.2); transform: scale(1); }
+  50% { opacity: 0.2; filter: brightness(0.5); transform: scale(0.85); }
+  100% { opacity: 1; filter: brightness(1.2); transform: scale(1); }
+}
+
 /* Base App Container */
 .app-container {
   display: flex;

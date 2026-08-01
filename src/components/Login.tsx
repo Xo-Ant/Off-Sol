@@ -3,6 +3,7 @@ import { useWallet } from '../lib/WalletContext';
 import * as bip39 from 'bip39';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
+import PixelLogo from './PixelLogo';
 
 export default function Login() {
   const { importWalletBase58, importWalletMnemonic } = useWallet();
@@ -49,7 +50,7 @@ export default function Login() {
   return (
     <div className="screen-container">
       <div className="media-pane">
-        <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '80%', objectFit: 'contain' }} />
+        <PixelLogo />
       </div>
 
       <div className="controls-pane">
