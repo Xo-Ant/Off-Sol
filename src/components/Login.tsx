@@ -47,7 +47,6 @@ export default function Login() {
   };
 
   return (
-  return (
     <div className="screen-container">
       <div className="media-pane">
         <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '80%', objectFit: 'contain' }} />

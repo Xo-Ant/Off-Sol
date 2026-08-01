@@ -213,5 +213,4 @@ export default function Sender({ onBack }: { onBack: () => void }) {
       </div>
     </div>
   );
-  );
 }

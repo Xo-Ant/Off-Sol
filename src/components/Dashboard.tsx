@@ -3,7 +3,7 @@ import { useWallet } from '../lib/WalletContext';
 import bs58 from 'bs58';
 
 export default function Dashboard({ onSend, onReceive }: { onSend: () => void, onReceive: () => void }) {
-  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, refreshState, logout } = useWallet();
+  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout } = useWallet();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [nonceLoading, setNonceLoading] = useState(false);
@@ -20,7 +20,6 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
     setNonceLoading(false);
   };
 
-  return (
   return (
     <>
       <div className="screen-container">

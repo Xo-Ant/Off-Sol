@@ -15,7 +15,9 @@ function AppContent() {
     return <Login />;
   }
 
-      <header className="app-header" style={{ padding: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+  return (
+    <div className="app-container">
+      <header className="app-header" style={{ padding: '10px', display: 'flex', justifyContent: 'flex-end', position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
            {pendingTx && <span className="badge badge-offline" style={{ background: '#ffa500' }}>1 Pending Tx</span>}
            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>

@@ -226,5 +226,4 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
       </div>
     </div>
   );
-  );
 }
