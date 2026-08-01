@@ -4,6 +4,15 @@ import { Connection, Keypair, PublicKey, SystemProgram, Transaction, sendAndConf
 import bs58 from 'bs58';
 import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+
+export interface TokenBalance {
+  mint: string;
+  ata: string;
+  amount: string;
+  decimals: number;
+  uiAmount: number;
+}
 
 interface WalletContextType {
   keypair: Keypair | null;
@@ -13,6 +22,7 @@ interface WalletContextType {
   isOnline: boolean;
   pendingTx: Uint8Array | null;
   mnemonic: string | null;
+  tokens: TokenBalance[];
   createWallet: () => { mnemonic: string, keypair: Keypair };
   importWalletBase58: (secretKeyBase58: string) => void;
   importWalletMnemonic: (mnemonic: string) => void;
@@ -38,6 +48,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [pendingTx, setPendingTxState] = useState<Uint8Array | null>(null);
   const [mnemonic, setMnemonicState] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<TokenBalance[]>([]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -69,6 +80,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const savedMnemonic = localStorage.getItem('offsol_mnemonic');
     if (savedMnemonic) {
       setMnemonicState(savedMnemonic);
+    }
+
+    const savedTokens = localStorage.getItem('offsol_tokens');
+    if (savedTokens) {
+      try {
+        setTokens(JSON.parse(savedTokens));
+      } catch (e) {
+        console.error("Invalid saved tokens");
+      }
     }
 
     return () => {
@@ -107,6 +127,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const bal = await conn.getBalance(keypair.publicKey);
       setBalance(bal / 1e9);
+
+      const tokenAccounts = await conn.getParsedTokenAccountsByOwner(keypair.publicKey, {
+        programId: TOKEN_PROGRAM_ID
+      });
+
+      const fetchedTokens: TokenBalance[] = tokenAccounts.value.map(ta => {
+        const parsedInfo = ta.account.data.parsed.info;
+        return {
+          mint: parsedInfo.mint,
+          ata: ta.pubkey.toBase58(),
+          amount: parsedInfo.tokenAmount.amount,
+          decimals: parsedInfo.tokenAmount.decimals,
+          uiAmount: parsedInfo.tokenAmount.uiAmount || 0,
+        };
+      }).filter(t => t.uiAmount > 0);
+
+      setTokens(fetchedTokens);
+      localStorage.setItem('offsol_tokens', JSON.stringify(fetchedTokens));
 
       if (nonceAccountPubKey) {
         const accountInfo = await conn.getAccountInfo(nonceAccountPubKey);
@@ -162,6 +200,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setCurrentNonce(null);
     setPendingTxState(null);
     setMnemonicState(null);
+    setTokens([]);
+    localStorage.removeItem('offsol_tokens');
   };
 
   const createNonceAccount = async () => {
@@ -199,7 +239,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider value={{
-      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx, mnemonic,
+      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx, mnemonic, tokens,
       createWallet, importWalletBase58, importWalletMnemonic, logout, createNonceAccount, setPendingTx, refreshState
     }}>
       {children}

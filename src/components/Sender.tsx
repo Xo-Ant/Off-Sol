@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '../lib/WalletContext';
 import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { createAssociatedTokenAccountIdempotentInstruction, createTransferInstruction, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import QRCode from 'qrcode';
 import { UR, UREncoder } from '@ngraveio/bc-ur';
 import { encryptForReceiver } from '../lib/crypto';
@@ -9,9 +10,10 @@ import type { MemeGif } from '../lib/gifManager';
 import { shareGifBlob } from '../lib/capacitorShare';
 
 export default function Sender({ onBack }: { onBack: () => void }) {
-  const { keypair, balance, isOnline, nonceAccountPubKey, currentNonce } = useWallet();
+  const { keypair, balance, isOnline, nonceAccountPubKey, currentNonce, tokens } = useWallet();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
+  const [asset, setAsset] = useState('SOL');
   const [error, setError] = useState('');
   
   const [phase, setPhase] = useState<'form' | 'method_select' | 'camera_qr' | 'gif_select' | 'success'>('form');
@@ -49,35 +51,73 @@ export default function Sender({ onBack }: { onBack: () => void }) {
       setError("Amount must be greater than 0");
       return;
     }
-    if (parsedAmount > balance) {
-      setError("Insufficient balance.");
-      return;
+    
+    if (asset === 'SOL') {
+      if (parsedAmount > balance) {
+        setError("Insufficient SOL balance.");
+        return;
+      }
+    } else {
+      const selectedToken = tokens.find(t => t.mint === asset);
+      if (!selectedToken || parsedAmount > selectedToken.uiAmount) {
+        setError("Insufficient token balance.");
+        return;
+      }
     }
 
     try {
       const toPubkey = new PublicKey(recipient);
-      const lamports = parsedAmount * LAMPORTS_PER_SOL;
       const tx = new Transaction();
 
-      if (isOnline) {
-        const conn = new Connection('https://api.devnet.solana.com');
-        const { blockhash } = await conn.getLatestBlockhash();
-        tx.recentBlockhash = blockhash;
-        tx.feePayer = keypair.publicKey;
-        tx.add(SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports }));
-      } else {
-        if (!nonceAccountPubKey || !currentNonce) {
-          throw new Error("Durable Nonce is not initialized. Cannot sign offline.");
+      if (asset === 'SOL') {
+        const lamports = parsedAmount * LAMPORTS_PER_SOL;
+        if (isOnline) {
+          const conn = new Connection('https://api.devnet.solana.com');
+          const { blockhash } = await conn.getLatestBlockhash();
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = keypair.publicKey;
+          tx.add(SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports }));
+        } else {
+          if (!nonceAccountPubKey || !currentNonce) {
+            throw new Error("Durable Nonce is not initialized. Cannot sign offline.");
+          }
+          tx.recentBlockhash = currentNonce;
+          tx.feePayer = keypair.publicKey;
+          tx.add(
+            SystemProgram.nonceAdvance({ noncePubkey: nonceAccountPubKey, authorizedPubkey: keypair.publicKey }),
+            SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports })
+          );
         }
-        tx.recentBlockhash = currentNonce;
-        tx.feePayer = keypair.publicKey;
-        tx.add(
-          SystemProgram.nonceAdvance({
-            noncePubkey: nonceAccountPubKey,
-            authorizedPubkey: keypair.publicKey,
-          }),
-          SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports })
-        );
+      } else {
+        const selectedToken = tokens.find(t => t.mint === asset);
+        if (!selectedToken) throw new Error("Token not found");
+
+        const mintPubkey = new PublicKey(selectedToken.mint);
+        const sourceAta = new PublicKey(selectedToken.ata);
+        const destAta = getAssociatedTokenAddressSync(mintPubkey, toPubkey, false);
+        const rawAmount = BigInt(Math.floor(parsedAmount * (10 ** selectedToken.decimals)));
+
+        if (isOnline) {
+          const conn = new Connection('https://api.devnet.solana.com');
+          const { blockhash } = await conn.getLatestBlockhash();
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = keypair.publicKey;
+          tx.add(
+            createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, toPubkey, mintPubkey),
+            createTransferInstruction(sourceAta, destAta, keypair.publicKey, rawAmount)
+          );
+        } else {
+          if (!nonceAccountPubKey || !currentNonce) {
+            throw new Error("Durable Nonce is not initialized. Cannot sign offline.");
+          }
+          tx.recentBlockhash = currentNonce;
+          tx.feePayer = keypair.publicKey;
+          tx.add(
+            SystemProgram.nonceAdvance({ noncePubkey: nonceAccountPubKey, authorizedPubkey: keypair.publicKey }),
+            createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, toPubkey, mintPubkey),
+            createTransferInstruction(sourceAta, destAta, keypair.publicKey, rawAmount)
+          );
+        }
       }
 
       tx.sign(keypair);
@@ -194,11 +234,22 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         {phase === 'form' && (
           <div className="flex-col">
             <div className="win-input-group">
+              <label>Asset:</label>
+              <select className="win-input" value={asset} onChange={e => setAsset(e.target.value)} style={{ padding: '10px' }}>
+                <option value="SOL">SOL (Balance: {balance})</option>
+                {tokens.map(t => (
+                  <option key={t.mint} value={t.mint}>
+                    {t.mint.substring(0,6)}... (Balance: {t.uiAmount})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="win-input-group">
               <label>Recipient Address (Base58):</label>
               <input className="win-input" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="e.g. 7vJ..." />
             </div>
             <div className="win-input-group">
-              <label>Amount (SOL):</label>
+              <label>Amount:</label>
               <input className="win-input" type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.1" />
             </div>
             <button className="win-btn" style={{ width: '100%', marginTop: '10px' }} onClick={handlePrepareTx}>Encrypt & Prepare</button>
