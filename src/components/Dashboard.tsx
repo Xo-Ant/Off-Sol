@@ -7,6 +7,8 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
   const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout, mnemonic } = useWallet();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showSecurityPrompt, setShowSecurityPrompt] = useState(false);
+  const [securityInput, setSecurityInput] = useState('');
   const [nonceLoading, setNonceLoading] = useState(false);
 
   if (!keypair) return null;
@@ -19,6 +21,24 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
       alert("Error: " + e.message);
     }
     setNonceLoading(false);
+  };
+
+  const handleExportClick = () => {
+    if (showExport) {
+      setShowExport(false);
+    } else {
+      setSecurityInput('');
+      setShowSecurityPrompt(true);
+    }
+  };
+
+  const handleSecurityConfirm = () => {
+    if (securityInput.trim().toUpperCase() === 'EXPORT') {
+      setShowSecurityPrompt(false);
+      setShowExport(true);
+    } else {
+      alert('Incorrect security word.');
+    }
   };
 
   return (
@@ -58,7 +78,7 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
           </div>
 
           <div className="text-center mt-2">
-            <button className="win-btn" onClick={() => setShowExport(!showExport)} style={{ width: '100%' }}>
+            <button className="win-btn" onClick={handleExportClick} style={{ width: '100%' }}>
               {showExport ? 'Hide Keys & Mnemonic' : 'Export Keys & Mnemonic'}
             </button>
             <button className="win-btn" onClick={() => setShowLogoutConfirm(true)} style={{ width: '100%', marginTop: '10px' }}>
@@ -70,12 +90,16 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
             <div className="win-error-box" style={{ marginTop: '15px' }}>
               <p style={{ fontSize: '14px', margin: 0, marginBottom: '5px' }}><strong>DANGER:</strong> Never share these!</p>
               
-              {mnemonic && (
+              {mnemonic ? (
                 <div style={{ marginBottom: '10px' }}>
                   <strong>12-Word Mnemonic (Seed Phrase):</strong>
                   <div style={{ wordBreak: 'break-word', fontFamily: 'monospace', fontSize: '14px', background: 'white', color: 'black', padding: '10px', border: '2px solid #000', marginTop: '5px' }}>
                     {mnemonic}
                   </div>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '10px', fontSize: '12px', color: '#ffaaaa' }}>
+                  <em>Note: Mnemonic is not available because this wallet was not created/imported via 12 words in this session.</em>
                 </div>
               )}
 
@@ -100,6 +124,28 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
               <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '25px' }}>
                 <button className="win-btn" onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1 }}>Cancel</button>
                 <button className="win-btn" style={{ flex: 1, backgroundColor: 'red' }} onClick={logout}>Logout</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSecurityPrompt && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+          <div className="win-window" style={{ background: '#1a1a2e', padding: '20px', width: '100%' }}>
+            <div className="win-content text-center">
+              <h3 style={{ color: 'red' }}>SECURITY CHECK</h3>
+              <p style={{ fontSize: '14px' }}>To view your highly sensitive private keys, please type the word <strong>EXPORT</strong> below.</p>
+              <input 
+                className="win-input" 
+                style={{ textAlign: 'center', marginTop: '10px', textTransform: 'uppercase' }} 
+                value={securityInput} 
+                onChange={(e) => setSecurityInput(e.target.value)} 
+                placeholder="Type EXPORT" 
+              />
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' }}>
+                <button className="win-btn" onClick={() => setShowSecurityPrompt(false)} style={{ flex: 1, backgroundColor: '#555' }}>Cancel</button>
+                <button className="win-btn" onClick={handleSecurityConfirm} style={{ flex: 1, backgroundColor: 'red' }}>Confirm</button>
               </div>
             </div>
           </div>
