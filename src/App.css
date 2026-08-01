@@ -1,152 +1,171 @@
-/* Off-Sol: Windows 95 Retro Theme */
+/* Off-Sol: 8-Bit Pixel Art Theme */
 @import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --win-gray: #c0c0c0;
-  --win-border-light: #ffffff;
-  --win-border-dark: #000000;
-  --win-border-mid: #808080;
-  --win-title-start: #800080; /* Purple */
-  --win-title-end: #ff8c00; /* Orange */
+  --pixel-bg: #1a1a2e;
+  --pixel-window: #e6e6ea;
+  --pixel-border: #000000;
+  --pixel-primary: #e94560; /* Neon Pink/Magenta */
+  --pixel-accent: #0f3460; /* Deep Blue */
+  --pixel-text: #000000;
+  --pixel-light-text: #ffffff;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #2d2d2d; /* Dark Slate instead of Teal */
-  color: #000000;
-  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
+  background-color: var(--pixel-bg);
+  color: var(--pixel-text);
+  font-family: 'Pixelify Sans', cursive, sans-serif;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
+  /* Retro CRT scanline effect */
+  background-image: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
 }
 
 #root {
   width: 100%;
   max-width: 600px;
-  padding: 10px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
 }
 
 /* Base Window Styling */
 .win-window {
-  background-color: var(--win-gray);
-  border-top: 2px solid var(--win-border-light);
-  border-left: 2px solid var(--win-border-light);
-  border-right: 2px solid var(--win-border-dark);
-  border-bottom: 2px solid var(--win-border-dark);
-  box-shadow: inset 1px 1px var(--win-border-light), inset -1px -1px var(--win-border-mid);
-  padding: 2px;
-  margin-bottom: 15px;
+  background-color: var(--pixel-window);
+  border: 4px solid var(--pixel-border);
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 1);
+  margin-bottom: 25px;
 }
 
-/* Titlebar with Purple/Orange gradient */
+/* Titlebar */
 .win-titlebar {
-  background: linear-gradient(90deg, var(--win-title-start), var(--win-title-end));
-  color: white;
-  padding: 3px 5px;
-  font-weight: bold;
-  font-size: 14px;
+  background-color: var(--pixel-primary);
+  color: var(--pixel-light-text);
+  border-bottom: 4px solid var(--pixel-border);
+  padding: 10px 15px;
+  font-weight: 700;
+  font-size: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .win-titlebar .title-text {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
 }
 
 .win-title-buttons {
   display: flex;
-  gap: 2px;
+  gap: 5px;
 }
 
 .win-title-btn {
-  background-color: var(--win-gray);
-  border-top: 1px solid var(--win-border-light);
-  border-left: 1px solid var(--win-border-light);
-  border-right: 1px solid var(--win-border-dark);
-  border-bottom: 1px solid var(--win-border-dark);
-  width: 16px;
-  height: 14px;
-  font-size: 10px;
+  background-color: #ff0044;
+  border: 3px solid var(--pixel-border);
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  color: black;
-  font-weight: bold;
+  color: white;
+  font-weight: 700;
+  box-shadow: 2px 2px 0px rgba(0,0,0,1);
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .win-title-btn:active {
-  border-top: 1px solid var(--win-border-dark);
-  border-left: 1px solid var(--win-border-dark);
-  border-right: 1px solid var(--win-border-light);
-  border-bottom: 1px solid var(--win-border-light);
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px rgba(0,0,0,1);
 }
 
 /* Content Area */
 .win-content {
-  padding: 15px;
+  padding: 20px;
 }
 
 /* Typography */
-p { margin-top: 0; margin-bottom: 15px; font-size: 14px; color: #000000; line-height: 1.4; }
+p { 
+  margin-top: 0; 
+  margin-bottom: 15px; 
+  font-size: 18px; 
+  color: var(--pixel-text); 
+  line-height: 1.5; 
+  font-weight: 500;
+}
+
 .win-content h2, .win-content h3 {
   margin-top: 0;
-  font-size: 18px;
-  color: #000000;
+  font-size: 22px;
+  color: var(--pixel-text);
   margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
 }
 
 /* Buttons */
 .win-btn {
-  background-color: var(--win-gray);
-  border-top: 2px solid var(--win-border-light);
-  border-left: 2px solid var(--win-border-light);
-  border-right: 2px solid var(--win-border-dark);
-  border-bottom: 2px solid var(--win-border-dark);
-  box-shadow: inset 1px 1px var(--win-border-light), inset -1px -1px var(--win-border-mid);
-  padding: 12px 16px; /* Larger tap targets for mobile APK standard */
+  background-color: var(--pixel-accent);
+  border: 4px solid var(--pixel-border);
+  box-shadow: 4px 4px 0px rgba(0,0,0,1);
+  padding: 15px 20px;
   cursor: pointer;
-  color: black;
+  color: var(--pixel-light-text);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 700;
   text-align: center;
   display: inline-block;
-  margin: 4px 0;
+  margin: 5px 0;
   box-sizing: border-box;
-  font-weight: bold;
+  text-transform: uppercase;
+  transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+}
+
+.win-btn:hover {
+  background-color: #1a5196;
 }
 
 .win-btn:active {
-  border-top: 2px solid var(--win-border-dark);
-  border-left: 2px solid var(--win-border-dark);
-  border-right: 2px solid var(--win-border-light);
-  border-bottom: 2px solid var(--win-border-light);
-  box-shadow: inset 1px 1px var(--win-border-dark), inset -1px -1px var(--win-border-light);
-  padding: 7px 11px 5px 13px; /* Simulate push */
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px rgba(0,0,0,1);
+}
+
+.win-btn:disabled {
+  background-color: #888;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 4px 4px 0px rgba(0,0,0,1);
 }
 
 /* Inputs */
 .win-input {
   background-color: white;
-  border-top: 2px solid var(--win-border-mid);
-  border-left: 2px solid var(--win-border-mid);
-  border-right: 2px solid var(--win-border-light);
-  border-bottom: 2px solid var(--win-border-light);
-  box-shadow: inset 1px 1px var(--win-border-dark);
-  padding: 10px;
+  border: 4px solid var(--pixel-border);
+  box-shadow: inset 3px 3px 0px rgba(0,0,0,0.2);
+  padding: 12px;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 18px;
   color: black;
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  outline: none;
+}
+
+.win-input:focus {
+  border-color: var(--pixel-primary);
 }
 
 .win-input-group {
@@ -155,40 +174,44 @@ p { margin-top: 0; margin-bottom: 15px; font-size: 14px; color: #000000; line-he
 
 .win-input-group label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 /* Helpers */
 .flex-col { display: flex; flex-direction: column; }
 .text-center { text-align: center; }
-.mt-2 { margin-top: 15px; }
-.mt-1 { margin-top: 10px; }
+.mt-2 { margin-top: 20px; }
+.mt-1 { margin-top: 15px; }
 
 /* Status Text */
-.status-online { color: #008000; font-weight: bold; }
-.status-offline { color: #ff0000; font-weight: bold; }
+.status-online { color: #00aa00; font-weight: 700; text-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
+.status-offline { color: #cc0000; font-weight: 700; text-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
 
 /* QR Overlays */
 .qr-container canvas {
   width: 100% !important;
   height: auto !important;
   max-width: 300px;
-  border: 2px solid black;
+  border: 4px solid black;
+  image-rendering: pixelated;
 }
 .scanner-overlay video {
   width: 100%;
-  border: 2px solid var(--win-border-dark);
+  border: 4px solid var(--pixel-border);
   background: black;
 }
 
 /* Custom Alert / Error Box */
 .win-error-box {
-  background-color: #ffcccc;
-  border: 1px solid red;
-  padding: 10px;
-  margin-bottom: 10px;
-  color: #800000;
-  font-weight: bold;
+  background-color: #ffb3b3;
+  border: 4px solid #cc0000;
+  box-shadow: 4px 4px 0px #cc0000;
+  padding: 15px;
+  margin-bottom: 15px;
+  color: #cc0000;
+  font-weight: 700;
+  font-size: 16px;
 }
