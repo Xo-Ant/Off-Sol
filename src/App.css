@@ -65,7 +65,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom: 2px solid var(--pixel-primary);
+  border-bottom: 2px solid var(--pixel-border); /* Changed from red/pink to dark pixel border */
   min-height: 250px;
   overflow: hidden;
   position: relative;
