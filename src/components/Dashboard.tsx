@@ -21,66 +21,55 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
   };
 
   return (
+  return (
     <>
-      <div className="win-window">
-        <div className="win-titlebar">
-          <div className="title-text">
-            <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
-            <span>Off-Sol Dashboard</span>
-          </div>
-          <div className="win-title-buttons">
-            <div className="win-title-btn" onClick={() => setShowLogoutConfirm(true)} title="Close">X</div>
-          </div>
+      <div className="screen-container">
+        <div className="media-pane">
+          <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '80%', objectFit: 'contain' }} />
         </div>
         
-        <div className="win-content">
-          <p><strong>Address:</strong><br /> <span style={{ fontSize: '11px', wordBreak: 'break-all' }}>{keypair.publicKey.toBase58()}</span></p>
+        <div className="controls-pane">
+          <p><strong>Address:</strong><br /> <span style={{ fontSize: '12px', wordBreak: 'break-all' }}>{keypair.publicKey.toBase58()}</span></p>
           <p><strong>Balance:</strong> {balance} SOL</p>
-          <p>
-            <strong>Network:</strong>{' '}
-            <span className={isOnline ? 'status-online' : 'status-offline'}>
-              {isOnline ? 'ONLINE' : 'OFFLINE'}
-            </span>
-          </p>
 
-          <div style={{ borderTop: '2px solid var(--win-border-mid)', margin: '15px 0' }}></div>
+          <div style={{ borderTop: '2px solid var(--pixel-border)', margin: '15px 0' }}></div>
 
           <h3>Offline Ammunition</h3>
           {nonceAccountPubKey ? (
-            <div style={{ fontSize: '12px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '14px', marginBottom: '15px' }}>
               <p><strong>Nonce Account:</strong><br/>{nonceAccountPubKey.toBase58().substring(0, 15)}...</p>
               <p><strong>Current Nonce:</strong><br/>{currentNonce || 'Loading...'}</p>
-              <p style={{ color: '#008000' }}>Ready for offline transfers.</p>
+              <p style={{ color: '#00cc00' }}>Ready for offline transfers.</p>
             </div>
           ) : (
-            <div style={{ marginBottom: '10px' }}>
-              <p style={{ fontSize: '12px' }}>Initialize a Durable Nonce to send SOL while offline. (Requires ~0.0014 SOL deposit).</p>
-              <button className="win-btn" onClick={handleCreateNonce} disabled={!isOnline || nonceLoading}>
+            <div style={{ marginBottom: '15px' }}>
+              <p style={{ fontSize: '14px' }}>Initialize a Durable Nonce to send SOL while offline. (Requires ~0.0014 SOL deposit).</p>
+              <button className="win-btn" onClick={handleCreateNonce} disabled={!isOnline || nonceLoading} style={{ width: '100%' }}>
                 {nonceLoading ? 'Initializing...' : 'Initialize Nonce'}
               </button>
             </div>
           )}
 
-          <div style={{ borderTop: '2px solid var(--win-border-mid)', margin: '15px 0' }}></div>
+          <div style={{ borderTop: '2px solid var(--pixel-border)', margin: '15px 0' }}></div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="win-btn" style={{ flex: 1, fontWeight: 'bold' }} onClick={onSend}>Send SOL</button>
-            <button className="win-btn" style={{ flex: 1, fontWeight: 'bold' }} onClick={onReceive}>Receive SOL</button>
+            <button className="win-btn" style={{ flex: 1, backgroundColor: '#00aa00' }} onClick={onSend}>Send</button>
+            <button className="win-btn" style={{ flex: 1, backgroundColor: '#aa0000' }} onClick={onReceive}>Receive</button>
           </div>
 
           <div className="text-center mt-2">
-            <button className="win-btn" onClick={() => setShowExport(!showExport)}>
+            <button className="win-btn" onClick={() => setShowExport(!showExport)} style={{ width: '100%' }}>
               {showExport ? 'Hide Secret Key' : 'Export Secret Key'}
             </button>
-            <button className="win-btn" style={{ marginLeft: '10px' }} onClick={() => setShowLogoutConfirm(true)}>
+            <button className="win-btn" onClick={() => setShowLogoutConfirm(true)} style={{ width: '100%', marginTop: '10px' }}>
               Logout
             </button>
           </div>
 
           {showExport && (
-            <div className="win-error-box" style={{ marginTop: '10px' }}>
-              <p style={{ fontSize: '12px', margin: 0, marginBottom: '5px' }}><strong>DANGER:</strong> Never share this key!</p>
-              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '11px', background: 'white', color: 'black', padding: '5px', border: 'inset 2px' }}>
+            <div className="win-error-box" style={{ marginTop: '15px' }}>
+              <p style={{ fontSize: '14px', margin: 0, marginBottom: '5px' }}><strong>DANGER:</strong> Never share this key!</p>
+              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', background: 'white', color: 'black', padding: '10px', border: '2px solid #000' }}>
                 {bs58.encode(keypair.secretKey)}
               </div>
             </div>
@@ -89,20 +78,16 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
       </div>
 
       {showLogoutConfirm && (
-        <div className="win-window" style={{ position: 'absolute', top: '20%', left: '10%', right: '10%', zIndex: 100, boxShadow: '5px 5px 0px rgba(0,0,0,0.5)' }}>
-          <div className="win-titlebar" style={{ background: '#000080' }}>
-            <div className="title-text"><span>!</span><span>Warning</span></div>
-            <div className="win-title-buttons">
-              <div className="win-title-btn" onClick={() => setShowLogoutConfirm(false)}>X</div>
-            </div>
-          </div>
-          <div className="win-content text-center">
-            <h3 style={{ color: 'red' }}>CRITICAL WARNING</h3>
-            <p>If you have not backed up your 12-word seed phrase or Secret Key, your funds will be <strong>lost forever</strong> upon logout.</p>
-            <p>Are you sure you want to proceed?</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' }}>
-              <button className="win-btn" onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-              <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={logout}>Yes, Logout</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+          <div className="win-window" style={{ background: '#1a1a2e', padding: '20px', width: '100%' }}>
+            <div className="win-content text-center">
+              <h3 style={{ color: 'red' }}>CRITICAL WARNING</h3>
+              <p>If you have not backed up your 12-word seed phrase or Secret Key, your funds will be <strong>lost forever</strong> upon logout.</p>
+              <p>Are you sure you want to proceed?</p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '25px' }}>
+                <button className="win-btn" onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="win-btn" style={{ flex: 1, backgroundColor: 'red' }} onClick={logout}>Logout</button>
+              </div>
             </div>
           </div>
         </div>

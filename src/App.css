@@ -1,13 +1,13 @@
-/* Off-Sol: 8-Bit Pixel Art Theme */
-@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap');
+/* Off-Sol: Clean Mobile Layout */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
 
 :root {
   --pixel-bg: #1a1a2e;
-  --pixel-window: #e6e6ea;
-  --pixel-border: #000000;
+  --pixel-window: #1e1e36;
+  --pixel-border: #2a2a4a;
   --pixel-primary: #e94560; /* Neon Pink/Magenta */
   --pixel-accent: #0f3460; /* Deep Blue */
-  --pixel-text: #000000;
+  --pixel-text: #ffffff;
   --pixel-light-text: #ffffff;
 }
 
@@ -16,45 +16,75 @@ body {
   padding: 0;
   background-color: var(--pixel-bg);
   color: var(--pixel-text);
-  font-family: 'Pixelify Sans', cursive, sans-serif;
+  font-family: 'Roboto Mono', monospace;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
-  /* Retro CRT scanline effect */
-  background-image: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px;
+  width: 100vw;
+  overflow-x: hidden;
 }
 
 #root {
   width: 100%;
   max-width: 600px;
-  padding: 20px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Base Window Styling */
-.win-window {
-  background-color: var(--pixel-window);
-  border: 4px solid var(--pixel-border);
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 1);
-  margin-bottom: 25px;
+/* Base App Container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-/* Titlebar */
-.win-titlebar {
-  background-color: var(--pixel-primary);
-  color: var(--pixel-light-text);
-  border-bottom: 4px solid var(--pixel-border);
-  padding: 10px 15px;
-  font-weight: 700;
-  font-size: 18px;
+.app-main {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+}
+
+/* Split Pane Layout for Mobile */
+.screen-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.media-pane {
+  flex: 0.8; /* Top section takes 40-50% */
+  background-color: #0b0b14;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  border-bottom: 2px solid var(--pixel-primary);
+  min-height: 250px;
+  overflow: hidden;
+  position: relative;
+}
+
+.controls-pane {
+  flex: 1.2;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Base Window Styling (Legacy Override) */
+.win-window {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Titlebar removed */
+.win-titlebar {
+  display: none;
 }
 
 .win-titlebar .title-text {
@@ -151,13 +181,13 @@ p {
 
 /* Inputs */
 .win-input {
-  background-color: white;
-  border: 4px solid var(--pixel-border);
-  box-shadow: inset 3px 3px 0px rgba(0,0,0,0.2);
+  background-color: rgba(255,255,255,0.1);
+  border: 2px solid var(--pixel-border);
+  border-radius: 8px;
   padding: 12px;
   font-family: inherit;
-  font-size: 18px;
-  color: black;
+  font-size: 16px;
+  color: white;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 15px;
@@ -191,17 +221,37 @@ p {
 .status-offline { color: #cc0000; font-weight: 700; text-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
 
 /* QR Overlays */
+.qr-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: white;
+  padding: 10px;
+}
 .qr-container canvas {
   width: 100% !important;
-  height: auto !important;
-  max-width: 300px;
-  border: 4px solid black;
-  image-rendering: pixelated;
+  height: 100% !important;
+  object-fit: contain;
+  max-width: 100%;
+  border: none;
+}
+.scanner-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
 }
 .scanner-overlay video {
   width: 100%;
-  border: 4px solid var(--pixel-border);
-  background: black;
+  height: 100%;
+  object-fit: cover;
+  border: none;
+}
+.media-placeholder {
+  color: #666;
+  font-size: 14px;
+  text-align: center;
 }
 
 /* Custom Alert / Error Box */

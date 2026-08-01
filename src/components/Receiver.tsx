@@ -163,69 +163,68 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="win-window">
-      <div className="win-titlebar">
-        <div className="title-text">
-          <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
-          <span>Receive SOL</span>
-        </div>
-        <div className="win-title-buttons">
-          <div className="win-title-btn" onClick={onBack}>X</div>
-        </div>
+    <div className="screen-container">
+      <div className="media-pane">
+        {phase === 'scan' ? (
+          <div className="scanner-overlay">
+            <video ref={videoRef} playsInline muted></video>
+            <div style={{ position: 'absolute', top: '50%', width: '100%', height: '2px', background: 'var(--pixel-primary)', boxShadow: '0 0 10px var(--pixel-primary)' }}></div>
+          </div>
+        ) : phase === 'success' ? (
+          <div className="media-placeholder" style={{ color: '#00cc00' }}>
+            SUCCESS!
+          </div>
+        ) : (
+          <div className="media-placeholder">
+            Awaiting Input...
+          </div>
+        )}
       </div>
 
-      <div className="win-content">
-        <p style={{ margin: '0 0 10px 0' }}>
-          <strong>Network:</strong> <span className={isOnline ? 'status-online' : 'status-offline'}>{isOnline ? 'Online' : 'Offline'}</span>
-        </p>
+      <div className="controls-pane">
+        <button className="win-btn" style={{ marginBottom: '15px', padding: '8px 12px', fontSize: '14px', backgroundColor: '#555' }} onClick={onBack}>&lt; Back</button>
 
         {errorMsg && <div className="win-error-box">{errorMsg}</div>}
 
         {phase === 'select' && (
           <div className="flex-col">
-            <p>How would you like to receive the transaction?</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px' }}>
-              <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={() => setPhase('scan')}>
-                Scan Camera QR
-              </button>
-              <label className="win-btn" style={{ display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
-                Load Meme-GIF File
-                <input type="file" accept="image/gif" hidden onChange={handleGifUpload} />
-              </label>
-              <button className="win-btn" onClick={onBack}>Cancel</button>
-            </div>
+            <h3>Receive Transaction</h3>
+            <button className="win-btn" style={{ width: '100%', marginBottom: '10px' }} onClick={() => setPhase('scan')}>
+              Scan QR
+            </button>
+            <label className="win-btn" style={{ display: 'block', width: '100%', textAlign: 'center', cursor: 'pointer' }}>
+              Upload Meme-GIF
+              <input type="file" accept="image/gif" hidden onChange={handleGifUpload} />
+            </label>
           </div>
         )}
 
         {phase === 'scan' && (
           <div className="flex-col">
-            <p style={{ margin: '0 0 10px 0' }}>Point camera at the Sender's Animated QR.</p>
-            <div className="scanner-overlay" style={{ position: 'relative' }}>
-              <video ref={videoRef} playsInline muted></video>
-              <div style={{ position: 'absolute', top: '50%', width: '100%', height: '2px', background: 'red', boxShadow: '0 0 5px red' }}></div>
-            </div>
-            <div style={{ border: 'inset 2px', background: 'white', height: '14px', marginTop: '10px', position: 'relative' }}>
-              <div style={{ background: '#000080', height: '100%', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
-              <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', fontSize: '10px', color: scanProgress > 50 ? 'white' : 'black', fontWeight: 'bold' }}>
+            <p>Scan Sender's animated QR.</p>
+            <div style={{ border: '2px solid var(--pixel-border)', background: '#222', height: '20px', position: 'relative', overflow: 'hidden', marginBottom: '15px' }}>
+              <div style={{ background: 'var(--pixel-primary)', height: '100%', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
+              <span style={{ position: 'absolute', top: '2px', left: '50%', transform: 'translateX(-50%)', fontSize: '12px', color: 'white', fontWeight: 'bold' }}>
                 {scanProgress}%
               </span>
             </div>
-            <button className="win-btn mt-1" onClick={() => setPhase('select')}>Cancel</button>
+            <button className="win-btn" style={{ width: '100%', backgroundColor: '#555' }} onClick={() => setPhase('select')}>Cancel</button>
           </div>
         )}
 
         {phase === 'success' && (
           <div className="text-center flex-col">
-            <h2 style={{ color: '#008000', margin: '10px 0' }}>SUCCESS</h2>
+            <h2 style={{ color: '#00cc00', margin: '10px 0' }}>SUCCESS</h2>
             <p>
               {isOnline 
-                ? "Transaction has been broadcasted to the network." 
-                : "Transaction saved as Pending! It will automatically broadcast when this device connects to the internet."}
+                ? "Transaction broadcasted to network!" 
+                : "Transaction saved as Pending! It will broadcast when online."}
             </p>
-            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={onBack}>OK</button>
+            <button className="win-btn" style={{ width: '100%', marginTop: '15px' }} onClick={onBack}>OK</button>
           </div>
         )}
       </div>
     </div>
+  );
   );
 }

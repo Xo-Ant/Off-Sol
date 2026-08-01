@@ -47,20 +47,14 @@ export default function Login() {
   };
 
   return (
-    <div className="win-window">
-      <div className="win-titlebar">
-        <div className="title-text">
-          <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
-          <span>Off-Sol Setup</span>
-        </div>
-        <div className="win-title-buttons">
-          <div className="win-title-btn" onClick={() => setMode('init')}>_</div>
-          <div className="win-title-btn" onClick={() => setMode('init')}>X</div>
-        </div>
+  return (
+    <div className="screen-container">
+      <div className="media-pane">
+        <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '80%', objectFit: 'contain' }} />
       </div>
-      <div className="win-content">
-        <h2>Welcome to Off-Sol</h2>
-        <p>The unbreakable offline Solana wallet.</p>
+
+      <div className="controls-pane">
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Welcome</h2>
 
         {error && <div className="win-error-box">Error: {error}</div>}
 
@@ -74,48 +68,48 @@ export default function Login() {
         {mode === 'create_select' && (
           <div className="flex-col">
             <p>How would you like to secure your new wallet?</p>
-            <button className="win-btn" onClick={handleGenerateMnemonic}>12-Word Mnemonic (Recommended)</button>
-            <button className="win-btn" onClick={handleGeneratePrivKey}>Private Key (Standard)</button>
-            <button className="win-btn mt-1" onClick={() => setMode('init')}>Cancel</button>
+            <button className="win-btn" onClick={handleGenerateMnemonic}>12-Word Mnemonic</button>
+            <button className="win-btn" onClick={handleGeneratePrivKey}>Private Key (Raw)</button>
+            <button className="win-btn" style={{ backgroundColor: '#555', marginTop: '10px' }} onClick={() => setMode('init')}>Cancel</button>
           </div>
         )}
 
         {mode === 'create_mnemonic' && (
           <div className="flex-col">
-            <p><strong>IMPORTANT:</strong> Save these 12 secret words in a secure place. If you lose them, your funds are gone forever.</p>
-            <div style={{ backgroundColor: 'white', padding: '10px', border: 'inset 2px', marginBottom: '15px', fontFamily: 'monospace' }}>
+            <p><strong>IMPORTANT:</strong> Save these 12 secret words. If you lose them, your funds are gone forever.</p>
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '15px', border: '2px solid var(--pixel-primary)', marginBottom: '15px', fontFamily: 'monospace', fontSize: '18px' }}>
               {generatedMnemonic}
             </div>
-            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={handleConfirmCreateMnemonic}>I Have Saved It (Login)</button>
-            <button className="win-btn" onClick={() => setMode('init')}>Cancel</button>
+            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={handleConfirmCreateMnemonic}>I Have Saved It</button>
+            <button className="win-btn" style={{ backgroundColor: '#555' }} onClick={() => setMode('init')}>Cancel</button>
           </div>
         )}
 
         {mode === 'create_privkey' && (
           <div className="flex-col">
-            <p><strong>IMPORTANT:</strong> Save this Base58 Private Key in a secure place. If you lose it, your funds are gone forever.</p>
-            <div style={{ wordBreak: 'break-all', backgroundColor: 'white', padding: '10px', border: 'inset 2px', marginBottom: '15px', fontFamily: 'monospace', fontSize: '11px' }}>
+            <p><strong>IMPORTANT:</strong> Save this Base58 Private Key. If you lose it, your funds are gone forever.</p>
+            <div style={{ wordBreak: 'break-all', backgroundColor: 'rgba(255,255,255,0.1)', padding: '15px', border: '2px solid var(--pixel-primary)', marginBottom: '15px', fontFamily: 'monospace', fontSize: '14px' }}>
               {generatedPrivKey}
             </div>
-            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={handleConfirmCreatePrivKey}>I Have Saved It (Login)</button>
-            <button className="win-btn" onClick={() => setMode('init')}>Cancel</button>
+            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={handleConfirmCreatePrivKey}>I Have Saved It</button>
+            <button className="win-btn" style={{ backgroundColor: '#555' }} onClick={() => setMode('init')}>Cancel</button>
           </div>
         )}
 
         {mode === 'import' && (
           <div className="flex-col">
             <div className="win-input-group">
-              <label>Enter 12-Word Secret Phrase OR Base58 Private Key:</label>
+              <label>12-Word Phrase OR Private Key:</label>
               <textarea 
                 className="win-input" 
-                rows={3}
+                rows={4}
                 value={importInput} 
                 onChange={e => setImportInput(e.target.value)} 
                 placeholder="apple banana cherry..." 
               />
             </div>
             <button className="win-btn" onClick={handleImport}>Import Wallet</button>
-            <button className="win-btn" onClick={() => setMode('init')}>Cancel</button>
+            <button className="win-btn" style={{ backgroundColor: '#555' }} onClick={() => setMode('init')}>Cancel</button>
           </div>
         )}
       </div>

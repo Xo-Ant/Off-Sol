@@ -15,10 +15,7 @@ function AppContent() {
     return <Login />;
   }
 
-  return (
-    <div className="app-container">
-      <header className="app-header">
-        <img src="/logo.jpg" alt="Off-Sol Logo" style={{ height: '50px', objectFit: 'contain' }} />
+      <header className="app-header" style={{ padding: '10px', display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
            {pendingTx && <span className="badge badge-offline" style={{ background: '#ffa500' }}>1 Pending Tx</span>}
            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
