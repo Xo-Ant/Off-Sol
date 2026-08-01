@@ -166,7 +166,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
     <div className="win-window">
       <div className="win-titlebar">
         <div className="title-text">
-          <span>O</span>
+          <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
           <span>Receive SOL</span>
         </div>
         <div className="win-title-buttons">

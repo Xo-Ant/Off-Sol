@@ -50,8 +50,8 @@ export default function Login() {
     <div className="win-window">
       <div className="win-titlebar">
         <div className="title-text">
-          <span>O</span>
-          <span>Off-Sol Wallet Setup</span>
+          <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
+          <span>Off-Sol Setup</span>
         </div>
         <div className="win-title-buttons">
           <div className="win-title-btn" onClick={() => setMode('init')}>_</div>

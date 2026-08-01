@@ -25,12 +25,11 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
       <div className="win-window">
         <div className="win-titlebar">
           <div className="title-text">
-            <span>O</span>
+            <img src="/favicon.jpg" alt="logo" style={{ width: 14, height: 14 }} />
             <span>Off-Sol Dashboard</span>
           </div>
           <div className="win-title-buttons">
-            <div className="win-title-btn" onClick={refreshState} title="Refresh">R</div>
-            <div className="win-title-btn" onClick={() => setShowLogoutConfirm(true)} title="Close/Logout">X</div>
+            <div className="win-title-btn" onClick={() => setShowLogoutConfirm(true)} title="Close">X</div>
           </div>
         </div>
         
@@ -72,6 +71,9 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
           <div className="text-center mt-2">
             <button className="win-btn" onClick={() => setShowExport(!showExport)}>
               {showExport ? 'Hide Secret Key' : 'Export Secret Key'}
+            </button>
+            <button className="win-btn" style={{ marginLeft: '10px' }} onClick={() => setShowLogoutConfirm(true)}>
+              Logout
             </button>
           </div>
 

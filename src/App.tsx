@@ -18,7 +18,7 @@ function AppContent() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Solana Wallet</h1>
+        <h1>Off-Sol</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
            {pendingTx && <span className="badge badge-offline" style={{ background: '#ffa500' }}>1 Pending Tx</span>}
            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
