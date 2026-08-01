@@ -142,7 +142,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
       try {
         const conn = new Connection('https://api.devnet.solana.com');
         const signature = await conn.sendRawTransaction(rawTx, { skipPreflight: true });
-        console.log("Broadcasted immediately:", signature);
+        console.log("Broadcasted:", signature);
         refreshState();
         setPhase('success');
       } catch (e: any) {
@@ -163,59 +163,69 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="flex-col">
-      <h2>Receive SOL</h2>
-      <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>
-        Network: <strong style={{ color: isOnline ? 'var(--accent-color)' : '#ffa500' }}>
-          {isOnline ? 'Online (Broadcasts immediately)' : 'Offline (Saves to Pending Tx)'}
-        </strong>
-      </p>
-
-      {errorMsg && <div style={{ color: 'var(--danger)', marginBottom: '1rem', padding: '1rem', background: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>{errorMsg}</div>}
-
-      {phase === 'select' && (
-        <div className="card">
-          <p>How would you like to receive the transaction?</p>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => setPhase('scan')}>
-              Scan Camera QR
-            </button>
-            <label className="btn" style={{ flex: 1, display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
-              Load Meme-GIF File
-              <input type="file" accept="image/gif" hidden onChange={handleGifUpload} />
-            </label>
-          </div>
+    <div className="win-window">
+      <div className="win-titlebar">
+        <div className="title-text">
+          <span>O</span>
+          <span>Receive SOL</span>
         </div>
-      )}
-
-      {phase === 'scan' && (
-        <div className="card">
-          <p className="mt-2">Point camera at the Sender's Animated QR.</p>
-          <div className="scanner-overlay" style={{ marginTop: '1rem' }}>
-            <video ref={videoRef} playsInline muted></video>
-            <div className="scan-line"></div>
-          </div>
-          <div style={{ marginTop: '1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', height: '10px', overflow: 'hidden' }}>
-            <div style={{ background: 'var(--accent-color)', height: '10px', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
-          </div>
-          <p className="mt-1 text-center">{scanProgress.toFixed(0)}% Received</p>
-          <button className="btn mt-2" style={{ width: '100%' }} onClick={() => setPhase('select')}>Cancel</button>
+        <div className="win-title-buttons">
+          <div className="win-title-btn" onClick={onBack}>X</div>
         </div>
-      )}
+      </div>
 
-      {phase === 'success' && (
-        <div className="text-center card">
-          <div style={{ color: 'var(--accent-color)', fontSize: '4rem', marginBottom: '1rem' }}>✓</div>
-          <h3>Transaction Decrypted & Ready!</h3>
-          <p>
-            {isOnline 
-              ? "Transaction has been broadcasted to the network." 
-              : "Transaction saved as Pending! It will automatically broadcast when this device connects to the internet."}
-          </p>
-        </div>
-      )}
+      <div className="win-content">
+        <p style={{ margin: '0 0 10px 0' }}>
+          <strong>Network:</strong> <span className={isOnline ? 'status-online' : 'status-offline'}>{isOnline ? 'Online' : 'Offline'}</span>
+        </p>
 
-      <button className="btn mt-2" onClick={onBack}>Back to Dashboard</button>
+        {errorMsg && <div className="win-error-box">{errorMsg}</div>}
+
+        {phase === 'select' && (
+          <div className="flex-col">
+            <p>How would you like to receive the transaction?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px' }}>
+              <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={() => setPhase('scan')}>
+                Scan Camera QR
+              </button>
+              <label className="win-btn" style={{ display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
+                Load Meme-GIF File
+                <input type="file" accept="image/gif" hidden onChange={handleGifUpload} />
+              </label>
+              <button className="win-btn" onClick={onBack}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'scan' && (
+          <div className="flex-col">
+            <p style={{ margin: '0 0 10px 0' }}>Point camera at the Sender's Animated QR.</p>
+            <div className="scanner-overlay" style={{ position: 'relative' }}>
+              <video ref={videoRef} playsInline muted></video>
+              <div style={{ position: 'absolute', top: '50%', width: '100%', height: '2px', background: 'red', boxShadow: '0 0 5px red' }}></div>
+            </div>
+            <div style={{ border: 'inset 2px', background: 'white', height: '14px', marginTop: '10px', position: 'relative' }}>
+              <div style={{ background: '#000080', height: '100%', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
+              <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', fontSize: '10px', color: scanProgress > 50 ? 'white' : 'black', fontWeight: 'bold' }}>
+                {scanProgress}%
+              </span>
+            </div>
+            <button className="win-btn mt-1" onClick={() => setPhase('select')}>Cancel</button>
+          </div>
+        )}
+
+        {phase === 'success' && (
+          <div className="text-center flex-col">
+            <h2 style={{ color: '#008000', margin: '10px 0' }}>SUCCESS</h2>
+            <p>
+              {isOnline 
+                ? "Transaction has been broadcasted to the network." 
+                : "Transaction saved as Pending! It will automatically broadcast when this device connects to the internet."}
+            </p>
+            <button className="win-btn" style={{ fontWeight: 'bold' }} onClick={onBack}>OK</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

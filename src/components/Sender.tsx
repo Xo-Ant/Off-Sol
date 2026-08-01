@@ -9,7 +9,7 @@ import type { MemeGif } from '../lib/gifManager';
 import { shareGifBlob } from '../lib/capacitorShare';
 
 export default function Sender({ onBack }: { onBack: () => void }) {
-  const { keypair, isOnline, nonceAccountPubKey, currentNonce } = useWallet();
+  const { keypair, balance, isOnline, nonceAccountPubKey, currentNonce } = useWallet();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +22,6 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const encoderRef = useRef<UREncoder | null>(null);
   const activeRef = useRef<boolean>(false);
 
-  // Load custom GIFs
   useEffect(() => {
     getCustomGifs().then(setGifs);
   }, []);
@@ -42,9 +41,20 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const handlePrepareTx = async () => {
     if (!keypair) return;
     setError('');
+    
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Amount must be greater than 0");
+      return;
+    }
+    if (parsedAmount > balance) {
+      setError("Insufficient balance.");
+      return;
+    }
+
     try {
       const toPubkey = new PublicKey(recipient);
-      const lamports = parseFloat(amount) * LAMPORTS_PER_SOL;
+      const lamports = parsedAmount * LAMPORTS_PER_SOL;
       const tx = new Transaction();
 
       if (isOnline) {
@@ -71,7 +81,6 @@ export default function Sender({ onBack }: { onBack: () => void }) {
       tx.sign(keypair);
       const rawTx = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
       
-      // Asymmetric Encryption
       const encrypted = await encryptForReceiver(keypair.secretKey, toPubkey, rawTx);
       setEncryptedData(encrypted);
       
@@ -84,7 +93,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const handleStartCameraQR = () => {
     if (!encryptedData) return;
     const ur = UR.fromBuffer(Buffer.from(encryptedData));
-    encoderRef.current = new UREncoder(ur, 150); // 150 bytes per frame
+    encoderRef.current = new UREncoder(ur, 150);
     setPhase('camera_qr');
   };
 
@@ -95,14 +104,13 @@ export default function Sender({ onBack }: { onBack: () => void }) {
       const finalBlob = await injectDataToGif(gif.blob, encryptedData);
       await shareGifBlob(finalBlob, `money_${Date.now()}.gif`);
       setError('');
-      setPhase('form'); // reset or show success
+      setPhase('form'); 
       alert("Shared successfully!");
     } catch(e: any) {
       setError("Failed to generate/share GIF: " + e.message);
     }
   };
 
-  // Canvas loop for Camera QR
   useEffect(() => {
     if (phase === 'camera_qr') {
       activeRef.current = true;
@@ -112,7 +120,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         if (!activeRef.current) return;
         requestAnimationFrame(drawLoop);
         
-        if (now - lastDraw < 100) return; // 10 fps
+        if (now - lastDraw < 100) return;
         lastDraw = now;
         
         if (encoderRef.current && canvasRef.current) {
@@ -134,81 +142,88 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   }, [phase]);
 
   return (
-    <div className="flex-col">
-      <h2>Send SOL</h2>
-      <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>
-        Network: <strong style={{ color: isOnline ? 'var(--accent-color)' : '#ffa500' }}>
-          {isOnline ? 'Online' : 'Offline'}
-        </strong>
-      </p>
-
-      {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', padding: '1rem', background: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>{error}</div>}
-
-      {phase === 'form' && (
-        <div className="card">
-          <div className="input-group">
-            <label>Recipient Address (Public Key)</label>
-            <input className="input-field" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="Must be exact, used for encryption..." />
-          </div>
-          <div className="input-group">
-            <label>Amount (SOL)</label>
-            <input className="input-field" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.1" />
-          </div>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handlePrepareTx}>
-            Encrypt & Prepare Transaction
-          </button>
+    <div className="win-window">
+      <div className="win-titlebar">
+        <div className="title-text">
+          <span>O</span>
+          <span>Send SOL</span>
         </div>
-      )}
-
-      {phase === 'method_select' && (
-        <div className="card">
-          <h3>Transaction Encrypted!</h3>
-          <p>Only the recipient can decode this transaction. How would you like to send it?</p>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleStartCameraQR}>
-              Show Camera QR
-            </button>
-            <button className="btn" style={{ flex: 1 }} onClick={() => setPhase('gif_select')}>
-              Hide in a Meme GIF
-            </button>
-          </div>
+        <div className="win-title-buttons">
+          <div className="win-title-btn" onClick={onBack}>X</div>
         </div>
-      )}
+      </div>
 
-      {phase === 'gif_select' && (
-        <div className="card">
-          <h3>Select a GIF</h3>
-          <p>The encrypted data will be injected invisibly into the GIF metadata.</p>
-          
-          <div style={{ margin: '1rem 0' }}>
-            <label className="btn" style={{ display: 'inline-block', cursor: 'pointer', background: 'var(--accent-color)', color: 'white' }}>
-              Upload Custom GIF
-              <input type="file" accept="image/gif" hidden onChange={handleUploadGif} />
-            </label>
+      <div className="win-content">
+        <p style={{ margin: '0 0 10px 0' }}>
+          <strong>Network:</strong> <span className={isOnline ? 'status-online' : 'status-offline'}>{isOnline ? 'Online' : 'Offline'}</span>
+        </p>
+
+        {error && <div className="win-error-box">{error}</div>}
+
+        {phase === 'form' && (
+          <div className="flex-col">
+            <div className="win-input-group">
+              <label>Recipient Address (Public Key):</label>
+              <input className="win-input" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="e.g. 7vJ..." />
+            </div>
+            <div className="win-input-group">
+              <label>Amount (SOL):</label>
+              <input className="win-input" type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.1" />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button className="win-btn" style={{ flex: 1, fontWeight: 'bold' }} onClick={handlePrepareTx}>Encrypt & Prepare</button>
+              <button className="win-btn" onClick={onBack}>Cancel</button>
+            </div>
           </div>
+        )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {gifs.length === 0 && <p style={{ opacity: 0.5, gridColumn: '1 / -1' }}>No GIFs uploaded yet.</p>}
-            {gifs.map(g => (
-              <div key={g.id} onClick={() => handleSelectGif(g)} style={{ cursor: 'pointer', border: '2px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.5rem', textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
-                <p style={{ color: 'var(--accent-color)', fontSize: '0.8rem', marginTop: '0.5rem' }}>Select & Share</p>
-              </div>
-            ))}
+        {phase === 'method_select' && (
+          <div className="flex-col">
+            <h3 style={{ color: '#008000' }}>Transaction Encrypted!</h3>
+            <p>Only the recipient can decode this transaction. How would you like to send it?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px' }}>
+              <button className="win-btn" onClick={handleStartCameraQR}>Show Camera QR</button>
+              <button className="win-btn" onClick={() => setPhase('gif_select')}>Hide in a Meme GIF</button>
+              <button className="win-btn" onClick={() => setPhase('form')}>Cancel</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {phase === 'camera_qr' && (
-        <div className="text-center card">
-          <p>Scan this Animated QR with the Receiver device.</p>
-          <div className="qr-container" style={{ margin: '1rem auto' }}>
-            <canvas ref={canvasRef}></canvas>
+        {phase === 'gif_select' && (
+          <div className="flex-col">
+            <h3>Select a GIF</h3>
+            <p>The encrypted data will be injected invisibly into the GIF metadata.</p>
+            
+            <div style={{ margin: '10px 0', display: 'flex', justifyContent: 'center' }}>
+              <label className="win-btn" style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                Upload Custom GIF
+                <input type="file" accept="image/gif" hidden onChange={handleUploadGif} />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', maxHeight: '200px', overflowY: 'auto', padding: '5px', border: 'inset 2px', background: 'white' }}>
+              {gifs.length === 0 && <p style={{ color: 'black', gridColumn: '1 / -1', margin: 0 }}>No GIFs uploaded yet.</p>}
+              {gifs.map(g => (
+                <div key={g.id} onClick={() => handleSelectGif(g)} style={{ cursor: 'pointer', border: 'outset 2px', background: '#c0c0c0', padding: '5px', textAlign: 'center' }}>
+                  <p style={{ margin: 0, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
+                </div>
+              ))}
+            </div>
+            
+            <button className="win-btn mt-1" onClick={() => setPhase('method_select')}>Back</button>
           </div>
-        </div>
-      )}
+        )}
 
-      <button className="btn mt-2" onClick={onBack}>Cancel / Back</button>
+        {phase === 'camera_qr' && (
+          <div className="text-center flex-col">
+            <p>Scan this Animated QR with the Receiver device.</p>
+            <div className="qr-container" style={{ margin: '10px auto' }}>
+              <canvas ref={canvasRef}></canvas>
+            </div>
+            <button className="win-btn mt-1" onClick={() => setPhase('method_select')}>Cancel</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

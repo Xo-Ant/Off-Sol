@@ -2,64 +2,66 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction, NONCE_ACCOUNT_LENGTH } from '@solana/web3.js';
 import bs58 from 'bs58';
+import * as bip39 from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
 
-interface WalletContextState {
+interface WalletContextType {
   keypair: Keypair | null;
-  isOnline: boolean;
   balance: number;
   nonceAccountPubKey: PublicKey | null;
   currentNonce: string | null;
-  login: (secret: string) => void;
-  logout: () => void;
-  refreshState: () => Promise<void>;
-  createNonceAccount: () => Promise<void>;
+  isOnline: boolean;
   pendingTx: Uint8Array | null;
+  createWallet: () => { mnemonic: string, keypair: Keypair };
+  importWalletBase58: (secretKeyBase58: string) => void;
+  importWalletMnemonic: (mnemonic: string) => void;
+  logout: () => void;
+  createNonceAccount: () => Promise<void>;
   setPendingTx: (tx: Uint8Array | null) => void;
+  refreshState: () => Promise<void>;
 }
 
-const WalletContext = createContext<WalletContextState | null>(null);
+const WalletContext = createContext<WalletContextType>({} as WalletContextType);
 
-export const useWallet = () => {
-  const ctx = useContext(WalletContext);
-  if (!ctx) throw new Error("Missing WalletContext");
-  return ctx;
+export const deriveKeypairFromMnemonic = (mnemonic: string): Keypair => {
+  const seed = bip39.mnemonicToSeedSync(mnemonic);
+  const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key;
+  return Keypair.fromSeed(derivedSeed);
 };
 
-export const WalletProvider = ({ children }: { children: ReactNode }) => {
+export function WalletProvider({ children }: { children: ReactNode }) {
   const [keypair, setKeypair] = useState<Keypair | null>(null);
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [balance, setBalance] = useState<number>(0);
   const [nonceAccountPubKey, setNonceAccountPubKey] = useState<PublicKey | null>(null);
   const [currentNonce, setCurrentNonce] = useState<string | null>(null);
-  const [pendingTx, setPendingTx] = useState<Uint8Array | null>(null);
-
-  const rpc = 'https://api.devnet.solana.com';
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [pendingTx, setPendingTxState] = useState<Uint8Array | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    // Load state from local storage
-    const storedSecret = localStorage.getItem('wallet_secret');
-    if (storedSecret) {
+
+    const savedKey = localStorage.getItem('offsol_secret');
+    if (savedKey) {
       try {
-        const kp = Keypair.fromSecretKey(bs58.decode(storedSecret));
+        const kp = Keypair.fromSecretKey(bs58.decode(savedKey));
         setKeypair(kp);
       } catch (e) {
-        localStorage.removeItem('wallet_secret');
+        console.error("Invalid saved key");
+        localStorage.removeItem('offsol_secret');
       }
     }
 
-    const storedNonceKey = localStorage.getItem('nonce_pubkey');
-    if (storedNonceKey) {
-      setNonceAccountPubKey(new PublicKey(storedNonceKey));
+    const savedNonce = localStorage.getItem('offsol_nonce_pubkey');
+    if (savedNonce) {
+      setNonceAccountPubKey(new PublicKey(savedNonce));
     }
-    
-    const storedPending = localStorage.getItem('pending_tx');
-    if (storedPending) {
-      setPendingTx(bs58.decode(storedPending));
+
+    const savedPending = localStorage.getItem('offsol_pending_tx');
+    if (savedPending) {
+      setPendingTxState(bs58.decode(savedPending));
     }
 
     return () => {
@@ -69,130 +71,125 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (isOnline && keypair) {
+    if (keypair && isOnline) {
       refreshState();
     }
-  }, [isOnline, keypair]);
+  }, [keypair, isOnline, nonceAccountPubKey]);
 
-  // If online and we have a pending TX, broadcast it!
   useEffect(() => {
+    // Auto broadcast pending tx when coming online
     if (isOnline && pendingTx) {
-      const broadcastPending = async () => {
-        try {
-          const conn = new Connection(rpc, 'confirmed');
-          const sig = await conn.sendRawTransaction(pendingTx);
-          await conn.confirmTransaction(sig);
-          console.log("Broadcasted pending TX:", sig);
+      const conn = new Connection('https://api.devnet.solana.com');
+      conn.sendRawTransaction(pendingTx, { skipPreflight: true })
+        .then(sig => {
+          console.log("Pending transaction broadcasted!", sig);
           setPendingTx(null);
-          localStorage.removeItem('pending_tx');
           refreshState();
-        } catch (e) {
-          console.error("Failed to broadcast pending tx", e);
-        }
-      };
-      broadcastPending();
+          alert("Pending transaction successfully broadcasted!");
+        })
+        .catch(err => {
+          console.error("Failed to broadcast pending tx", err);
+          alert("Failed to broadcast pending tx: " + err.message);
+        });
     }
   }, [isOnline, pendingTx]);
 
-  const login = (secret: string) => {
-    const kp = Keypair.fromSecretKey(bs58.decode(secret));
+  const refreshState = async () => {
+    if (!keypair || !isOnline) return;
+    const conn = new Connection('https://api.devnet.solana.com');
+    try {
+      const bal = await conn.getBalance(keypair.publicKey);
+      setBalance(bal / 1e9);
+
+      if (nonceAccountPubKey) {
+        const accountInfo = await conn.getAccountInfo(nonceAccountPubKey);
+        if (accountInfo) {
+          const nonceAccount = await conn.getNonce(nonceAccountPubKey, 'confirmed');
+          if (nonceAccount) {
+            setCurrentNonce(nonceAccount.nonce);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error refreshing state", e);
+    }
+  };
+
+  const createWallet = () => {
+    const mnemonic = bip39.generateMnemonic();
+    const kp = deriveKeypairFromMnemonic(mnemonic);
+    localStorage.setItem('offsol_secret', bs58.encode(kp.secretKey));
     setKeypair(kp);
-    localStorage.setItem('wallet_secret', secret);
-    setNonceAccountPubKey(null);
-    setCurrentNonce(null);
-    localStorage.removeItem('nonce_pubkey');
-    refreshState();
+    return { mnemonic, keypair: kp };
+  };
+
+  const importWalletBase58 = (secretKeyBase58: string) => {
+    const kp = Keypair.fromSecretKey(bs58.decode(secretKeyBase58));
+    localStorage.setItem('offsol_secret', secretKeyBase58);
+    setKeypair(kp);
+  };
+
+  const importWalletMnemonic = (mnemonic: string) => {
+    if (!bip39.validateMnemonic(mnemonic)) {
+      throw new Error("Invalid 12-word recovery phrase.");
+    }
+    const kp = deriveKeypairFromMnemonic(mnemonic);
+    localStorage.setItem('offsol_secret', bs58.encode(kp.secretKey));
+    setKeypair(kp);
   };
 
   const logout = () => {
+    localStorage.removeItem('offsol_secret');
+    localStorage.removeItem('offsol_nonce_pubkey');
+    localStorage.removeItem('offsol_pending_tx');
     setKeypair(null);
     setBalance(0);
     setNonceAccountPubKey(null);
     setCurrentNonce(null);
-    localStorage.removeItem('wallet_secret');
-    localStorage.removeItem('nonce_pubkey');
-  };
-
-  const refreshState = async () => {
-    if (!keypair || !isOnline) return;
-    const conn = new Connection(rpc, 'confirmed');
-    
-    // Get balance
-    const bal = await conn.getBalance(keypair.publicKey);
-    setBalance(bal / 1e9);
-
-    // Check nonce
-    if (nonceAccountPubKey) {
-      try {
-        const accountInfo = await conn.getAccountInfo(nonceAccountPubKey);
-        if (accountInfo) {
-          const nonceAccount = await conn.getNonce(
-            nonceAccountPubKey,
-            'confirmed'
-          );
-          if (nonceAccount) {
-             setCurrentNonce(nonceAccount.nonce);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch nonce", e);
-      }
-    }
+    setPendingTxState(null);
   };
 
   const createNonceAccount = async () => {
-    if (!keypair || !isOnline) return;
-    try {
-      const conn = new Connection(rpc, 'confirmed');
-      const nonceAccount = Keypair.generate();
-      const minimumAmount = await conn.getMinimumBalanceForRentExemption(NONCE_ACCOUNT_LENGTH);
-      
-      const { blockhash } = await conn.getLatestBlockhash();
-      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: keypair.publicKey }).add(
-        SystemProgram.createNonceAccount({
-          fromPubkey: keypair.publicKey,
-          noncePubkey: nonceAccount.publicKey,
-          authorizedPubkey: keypair.publicKey,
-          lamports: minimumAmount,
-        })
-      );
-      
-      await sendAndConfirmTransaction(conn, tx, [keypair, nonceAccount]);
-      
-      setNonceAccountPubKey(nonceAccount.publicKey);
-      localStorage.setItem('nonce_pubkey', nonceAccount.publicKey.toBase58());
-      
-      await refreshState();
-    } catch (e) {
-      console.error("Failed to create nonce account", e);
-      throw e;
-    }
+    if (!keypair || !isOnline) throw new Error("Must be online and logged in.");
+    const conn = new Connection('https://api.devnet.solana.com', 'confirmed');
+    
+    const nonceAccount = Keypair.generate();
+    const minimumAmount = await conn.getMinimumBalanceForRentExemption(NONCE_ACCOUNT_LENGTH);
+    
+    const tx = new Transaction().add(
+      SystemProgram.createNonceAccount({
+        fromPubkey: keypair.publicKey,
+        noncePubkey: nonceAccount.publicKey,
+        authorizedPubkey: keypair.publicKey,
+        lamports: minimumAmount,
+      })
+    );
+
+    const signature = await sendAndConfirmTransaction(conn, tx, [keypair, nonceAccount]);
+    console.log("Nonce account created:", signature);
+    
+    setNonceAccountPubKey(nonceAccount.publicKey);
+    localStorage.setItem('offsol_nonce_pubkey', nonceAccount.publicKey.toBase58());
+    await refreshState();
   };
 
-  const savePendingTx = (tx: Uint8Array | null) => {
-    setPendingTx(tx);
+  const setPendingTx = (tx: Uint8Array | null) => {
+    setPendingTxState(tx);
     if (tx) {
-      localStorage.setItem('pending_tx', bs58.encode(tx));
+      localStorage.setItem('offsol_pending_tx', bs58.encode(tx));
     } else {
-      localStorage.removeItem('pending_tx');
+      localStorage.removeItem('offsol_pending_tx');
     }
   };
 
   return (
     <WalletContext.Provider value={{
-      keypair,
-      isOnline,
-      balance,
-      nonceAccountPubKey,
-      currentNonce,
-      login,
-      logout,
-      refreshState,
-      createNonceAccount,
-      pendingTx,
-      setPendingTx: savePendingTx
+      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx,
+      createWallet, importWalletBase58, importWalletMnemonic, logout, createNonceAccount, setPendingTx, refreshState
     }}>
       {children}
     </WalletContext.Provider>
   );
-};
+}
+
+export const useWallet = () => useContext(WalletContext);
