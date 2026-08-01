@@ -12,19 +12,22 @@
 
 body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
   background-color: #2d2d2d; /* Dark Slate instead of Teal */
   color: #000000;
-  font-family: 'Tahoma', 'MS Sans Serif', sans-serif; /* Fallback to standard system fonts for true retro feel */
+  font-family: 'Tahoma', 'MS Sans Serif', sans-serif;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
 }
 
 #root {
   width: 100%;
-  max-width: 400px;
+  max-width: 600px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Base Window Styling */
@@ -92,9 +95,12 @@ body {
 }
 
 /* Typography */
+p { margin-top: 0; margin-bottom: 15px; font-size: 14px; color: #000000; line-height: 1.4; }
 .win-content h2, .win-content h3 {
   margin-top: 0;
-  font-size: 16px;
+  font-size: 18px;
+  color: #000000;
+  margin-bottom: 15px;
 }
 
 /* Buttons */
@@ -105,15 +111,16 @@ body {
   border-right: 2px solid var(--win-border-dark);
   border-bottom: 2px solid var(--win-border-dark);
   box-shadow: inset 1px 1px var(--win-border-light), inset -1px -1px var(--win-border-mid);
-  padding: 6px 12px;
+  padding: 12px 16px; /* Larger tap targets for mobile APK standard */
   cursor: pointer;
   color: black;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
   display: inline-block;
   margin: 4px 0;
   box-sizing: border-box;
+  font-weight: bold;
 }
 
 .win-btn:active {
@@ -133,22 +140,24 @@ body {
   border-right: 2px solid var(--win-border-light);
   border-bottom: 2px solid var(--win-border-light);
   box-shadow: inset 1px 1px var(--win-border-dark);
-  padding: 4px 6px;
+  padding: 10px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 16px;
+  color: black;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 10px;
 }
 
 .win-input-group {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .win-input-group label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 /* Helpers */
