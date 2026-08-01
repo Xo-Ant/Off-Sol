@@ -1,63 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
-import { Connection, PublicKey } from '@solana/web3.js';
-import { LTDecoder } from '../lib/fountain';
-import { fnv1a, parseFrame } from '../lib/protocol';
+import { useWallet } from '../lib/WalletContext';
+import { Connection } from '@solana/web3.js';
+import { URDecoder } from '@ngraveio/bc-ur';
 import WorkerScript from '../lib/worker?worker';
 
-const OVERHEAD_EST = 1.18;
-
 export default function Receiver({ onBack }: { onBack: () => void }) {
-  const [phase, setPhase] = useState<'generate' | 'scan' | 'success'>('generate');
-  const [pubkeyInput, setPubkeyInput] = useState('');
-  const [staticQrUrl, setStaticQrUrl] = useState('');
+  const { isOnline, setPendingTx, refreshState } = useWallet();
+  const [phase, setPhase] = useState<'scan' | 'success'>('scan');
   const [scanProgress, setScanProgress] = useState(0);
-  const [txSignature, setTxSignature] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const decoderRef = useRef<LTDecoder | null>(null);
-  const sessionIdRef = useRef<number>(0);
+  const decoderRef = useRef<URDecoder | null>(null);
   const workersRef = useRef<Worker[]>([]);
   const busyRef = useRef<boolean[]>([]);
-  const frameIdRef = useRef(0);
   const doneRef = useRef(false);
-
-  // Generate initial static QR code with Blockhash
-  const handleGenerate = async () => {
-    try {
-      const pubkey = new PublicKey(pubkeyInput);
-      const conn = new Connection('https://api.devnet.solana.com');
-      const { blockhash } = await conn.getLatestBlockhash();
-      
-      const payload = JSON.stringify({
-        pubkey: pubkey.toBase58(),
-        recentBlockhash: blockhash
-      });
-      
-      const qrDataUrl = await QRCode.toDataURL(payload, { width: 300, margin: 2 });
-      setStaticQrUrl(qrDataUrl);
-      setPhase('scan');
-    } catch (e) {
-      setErrorMsg('Invalid Public Key or Network Error.');
-    }
-  };
+  const frameIdRef = useRef(0);
 
   useEffect(() => {
     if (phase === 'scan') {
+      decoderRef.current = new URDecoder();
       startCamera();
     }
-    return () => {
-      stopCamera();
-    };
+    return () => stopCamera();
   }, [phase]);
 
   const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setErrorMsg("Camera needs a secure context (https).");
-      return;
-    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 640 } }
@@ -78,7 +47,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
           const { id, bytes } = e.data;
           if (id === -1) return;
           busyRef.current[slot] = false;
-          if (bytes) onDecoded(bytes);
+          if (bytes) onDecodedQR(bytes);
         };
         workersRef.current.push(w);
         busyRef.current.push(false);
@@ -115,39 +84,49 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
     requestAnimationFrame(captureLoop);
   };
 
-  const onDecoded = async (bytes: Uint8Array) => {
-    if (doneRef.current) return;
-    const parsed = parseFrame(bytes);
-    if (!parsed) return;
-    const { header, block } = parsed;
+  const onDecodedQR = async (bytes: Uint8Array) => {
+    if (doneRef.current || !decoderRef.current) return;
     
-    if (!decoderRef.current || sessionIdRef.current !== header.sessionId) {
-      decoderRef.current = new LTDecoder(header.k, header.blockLen, header.sessionId, header.totalLen);
-      sessionIdRef.current = header.sessionId;
-    }
-    
-    decoderRef.current.addFrame(header.seq, block);
-    const progress = Math.min(100, (decoderRef.current.framesNew / (header.k * OVERHEAD_EST)) * 100);
-    setScanProgress(progress);
-    
-    if (decoderRef.current.isComplete) {
-      const payload = decoderRef.current.assemble();
-      if (payload && fnv1a(payload) === header.payloadFnv) {
-        doneRef.current = true;
-        setScanProgress(100);
-        await broadcastTransaction(payload);
+    try {
+      const qrString = new TextDecoder().decode(bytes);
+      if (!qrString.toUpperCase().startsWith("UR:")) return;
+      
+      decoderRef.current.receivePart(qrString);
+      setScanProgress(Math.floor(decoderRef.current.estimatedPercentComplete() * 100));
+
+      if (decoderRef.current.isComplete()) {
+        if (decoderRef.current.isSuccess()) {
+          doneRef.current = true;
+          setScanProgress(100);
+          const ur = decoderRef.current.resultUR();
+          const rawTxBuffer = ur.decodeCBOR(); // Returns Buffer
+          const rawTx = new Uint8Array(rawTxBuffer);
+          
+          await processTransaction(rawTx);
+        } else {
+          setErrorMsg("Failed to decode UR data.");
+          decoderRef.current = new URDecoder();
+        }
       }
+    } catch (e) {
+      // ignore bad frames
     }
   };
 
-  const broadcastTransaction = async (rawTxBytes: Uint8Array) => {
-    try {
-      const conn = new Connection('https://api.devnet.solana.com');
-      const signature = await conn.sendRawTransaction(rawTxBytes, { skipPreflight: true });
-      setTxSignature(signature);
+  const processTransaction = async (rawTx: Uint8Array) => {
+    if (isOnline) {
+      try {
+        const conn = new Connection('https://api.devnet.solana.com');
+        const signature = await conn.sendRawTransaction(rawTx, { skipPreflight: true });
+        console.log("Broadcasted immediately:", signature);
+        refreshState();
+        setPhase('success');
+      } catch (e: any) {
+        setErrorMsg("Broadcast failed: " + e.message);
+      }
+    } else {
+      setPendingTx(rawTx);
       setPhase('success');
-    } catch (e: any) {
-      setErrorMsg("Broadcast failed: " + e.message);
     }
   };
 
@@ -161,60 +140,42 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="flex-col">
-      <h2>Receive SOL <span className="badge badge-online">Online</span></h2>
+      <h2>Receive SOL</h2>
+      <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>
+        Status: <strong style={{ color: isOnline ? 'var(--accent-color)' : '#ffa500' }}>
+          {isOnline ? 'Online (Broadcasts immediately)' : 'Offline (Saves to Pending Tx)'}
+        </strong>
+      </p>
+
       {errorMsg && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{errorMsg}</div>}
-      
-      {phase === 'generate' && (
-        <>
-          <p>Enter your Solana Devnet address to generate the receiver config.</p>
-          <div className="input-group">
-            <label>Public Key (Base58)</label>
-            <input 
-              className="input-field" 
-              value={pubkeyInput} 
-              onChange={e => setPubkeyInput(e.target.value)} 
-              placeholder="e.g. 7vJ..." 
-            />
-          </div>
-          <button className="btn btn-primary" onClick={handleGenerate}>
-            Generate Code
-          </button>
-        </>
-      )}
 
       {phase === 'scan' && (
-        <>
-          <p>Step 1: The offline sender must scan this QR to get your address and the blockhash.</p>
-          <div className="qr-container">
-            <img src={staticQrUrl} alt="Receiver Config QR" />
-          </div>
-          
-          <p className="mt-2">Step 2: Point this camera at the Sender's animated QR.</p>
-          <div className="scanner-overlay">
+        <div className="card">
+          <p className="mt-2">Point camera at the Sender's Animated QR.</p>
+          <div className="scanner-overlay" style={{ marginTop: '1rem' }}>
             <video ref={videoRef} playsInline muted></video>
             <div className="scan-line"></div>
           </div>
-          <div style={{ marginTop: '1rem', background: '#333', borderRadius: '10px', height: '10px', overflow: 'hidden' }}>
+          <div style={{ marginTop: '1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', height: '10px', overflow: 'hidden' }}>
             <div style={{ background: 'var(--accent-color)', height: '10px', width: `${scanProgress}%`, transition: 'width 0.2s' }}></div>
           </div>
-          <p className="mt-1">{scanProgress.toFixed(0)}% Received</p>
-        </>
+          <p className="mt-1 text-center">{scanProgress.toFixed(0)}% Received</p>
+        </div>
       )}
 
       {phase === 'success' && (
-        <div className="text-center">
+        <div className="text-center card">
           <div style={{ color: 'var(--accent-color)', fontSize: '4rem', marginBottom: '1rem' }}>✓</div>
-          <h3>Transfer Complete!</h3>
-          <p>Transaction successfully broadcasted.</p>
-          <p style={{ wordBreak: 'break-all', fontSize: '0.8rem', opacity: 0.7 }}>
-            <a href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-color)'}}>
-              {txSignature}
-            </a>
+          <h3>Transfer Received!</h3>
+          <p>
+            {isOnline 
+              ? "Transaction has been broadcasted to the network." 
+              : "Transaction saved as Pending! It will automatically broadcast when this device connects to the internet."}
           </p>
         </div>
       )}
 
-      <button className="btn mt-2" onClick={onBack}>Cancel</button>
+      <button className="btn mt-2" onClick={onBack}>Back to Dashboard</button>
     </div>
   );
 }

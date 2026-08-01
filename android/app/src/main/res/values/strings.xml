@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Off-Sol</string>
+    <string name="title_activity_main">Off-Sol</string>
+    <string name="package_name">com.offsol.app</string>
+    <string name="custom_url_scheme">com.offsol.app</string>
+</resources>
