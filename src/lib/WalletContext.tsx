@@ -12,6 +12,7 @@ interface WalletContextType {
   currentNonce: string | null;
   isOnline: boolean;
   pendingTx: Uint8Array | null;
+  mnemonic: string | null;
   createWallet: () => { mnemonic: string, keypair: Keypair };
   importWalletBase58: (secretKeyBase58: string) => void;
   importWalletMnemonic: (mnemonic: string) => void;
@@ -36,6 +37,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [currentNonce, setCurrentNonce] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [pendingTx, setPendingTxState] = useState<Uint8Array | null>(null);
+  const [mnemonic, setMnemonicState] = useState<string | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -62,6 +64,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const savedPending = localStorage.getItem('offsol_pending_tx');
     if (savedPending) {
       setPendingTxState(bs58.decode(savedPending));
+    }
+
+    const savedMnemonic = localStorage.getItem('offsol_mnemonic');
+    if (savedMnemonic) {
+      setMnemonicState(savedMnemonic);
     }
 
     return () => {
@@ -116,37 +123,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const createWallet = () => {
-    const mnemonic = bip39.generateMnemonic();
-    const kp = deriveKeypairFromMnemonic(mnemonic);
+    const mnemonicStr = bip39.generateMnemonic();
+    const kp = deriveKeypairFromMnemonic(mnemonicStr);
     localStorage.setItem('offsol_secret', bs58.encode(kp.secretKey));
+    localStorage.setItem('offsol_mnemonic', mnemonicStr);
     setKeypair(kp);
-    return { mnemonic, keypair: kp };
+    setMnemonicState(mnemonicStr);
+    return { mnemonic: mnemonicStr, keypair: kp };
   };
 
   const importWalletBase58 = (secretKeyBase58: string) => {
     const kp = Keypair.fromSecretKey(bs58.decode(secretKeyBase58));
     localStorage.setItem('offsol_secret', secretKeyBase58);
+    localStorage.removeItem('offsol_mnemonic'); // Clear any old mnemonic
     setKeypair(kp);
+    setMnemonicState(null);
   };
 
-  const importWalletMnemonic = (mnemonic: string) => {
-    if (!bip39.validateMnemonic(mnemonic)) {
+  const importWalletMnemonic = (mnemonicStr: string) => {
+    if (!bip39.validateMnemonic(mnemonicStr)) {
       throw new Error("Invalid 12-word recovery phrase.");
     }
-    const kp = deriveKeypairFromMnemonic(mnemonic);
+    const kp = deriveKeypairFromMnemonic(mnemonicStr);
     localStorage.setItem('offsol_secret', bs58.encode(kp.secretKey));
+    localStorage.setItem('offsol_mnemonic', mnemonicStr);
     setKeypair(kp);
+    setMnemonicState(mnemonicStr);
   };
 
   const logout = () => {
     localStorage.removeItem('offsol_secret');
     localStorage.removeItem('offsol_nonce_pubkey');
     localStorage.removeItem('offsol_pending_tx');
+    localStorage.removeItem('offsol_mnemonic');
     setKeypair(null);
     setBalance(0);
     setNonceAccountPubKey(null);
     setCurrentNonce(null);
     setPendingTxState(null);
+    setMnemonicState(null);
   };
 
   const createNonceAccount = async () => {
@@ -184,7 +199,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider value={{
-      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx,
+      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx, mnemonic,
       createWallet, importWalletBase58, importWalletMnemonic, logout, createNonceAccount, setPendingTx, refreshState
     }}>
       {children}

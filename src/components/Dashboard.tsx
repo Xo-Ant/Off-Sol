@@ -4,7 +4,7 @@ import bs58 from 'bs58';
 import PixelLogo from './PixelLogo';
 
 export default function Dashboard({ onSend, onReceive }: { onSend: () => void, onReceive: () => void }) {
-  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout } = useWallet();
+  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout, mnemonic } = useWallet();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [nonceLoading, setNonceLoading] = useState(false);
@@ -59,7 +59,7 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
 
           <div className="text-center mt-2">
             <button className="win-btn" onClick={() => setShowExport(!showExport)} style={{ width: '100%' }}>
-              {showExport ? 'Hide Secret Key' : 'Export Secret Key'}
+              {showExport ? 'Hide Keys & Mnemonic' : 'Export Keys & Mnemonic'}
             </button>
             <button className="win-btn" onClick={() => setShowLogoutConfirm(true)} style={{ width: '100%', marginTop: '10px' }}>
               Logout
@@ -68,9 +68,22 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
 
           {showExport && (
             <div className="win-error-box" style={{ marginTop: '15px' }}>
-              <p style={{ fontSize: '14px', margin: 0, marginBottom: '5px' }}><strong>DANGER:</strong> Never share this key!</p>
-              <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', background: 'white', color: 'black', padding: '10px', border: '2px solid #000' }}>
-                {bs58.encode(keypair.secretKey)}
+              <p style={{ fontSize: '14px', margin: 0, marginBottom: '5px' }}><strong>DANGER:</strong> Never share these!</p>
+              
+              {mnemonic && (
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>12-Word Mnemonic (Seed Phrase):</strong>
+                  <div style={{ wordBreak: 'break-word', fontFamily: 'monospace', fontSize: '14px', background: 'white', color: 'black', padding: '10px', border: '2px solid #000', marginTop: '5px' }}>
+                    {mnemonic}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <strong>Private Key (Base58):</strong>
+                <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12px', background: 'white', color: 'black', padding: '10px', border: '2px solid #000', marginTop: '5px' }}>
+                  {bs58.encode(keypair.secretKey)}
+                </div>
               </div>
             </div>
           )}

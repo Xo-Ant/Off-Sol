@@ -2,13 +2,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
 
 :root {
-  --pixel-bg: #1a1a2e;
-  --pixel-window: #1e1e36;
-  --pixel-border: #2a2a4a;
-  --pixel-primary: #e94560; /* Neon Pink/Magenta */
-  --pixel-accent: #0f3460; /* Deep Blue */
+  --pixel-bg: #05050a; /* Almost pitch black */
+  --pixel-window: #0a0a14;
+  --pixel-border: #222244;
+  --pixel-primary: #ff0055; /* Hot Neon Pink */
+  --pixel-accent: #00f0ff; /* Neon Cyan */
   --pixel-text: #ffffff;
-  --pixel-light-text: #ffffff;
+  --pixel-light-text: #05050a; /* Dark text for neon buttons */
 }
 
 body {
@@ -61,11 +61,11 @@ body {
 
 .media-pane {
   flex: 0.8; /* Top section takes 40-50% */
-  background-color: #0b0b14;
+  background-color: #000000; /* Pure black for neon pop */
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom: 2px solid var(--pixel-border); /* Changed from red/pink to dark pixel border */
+  border-bottom: 2px solid var(--pixel-border);
   min-height: 250px;
   overflow: hidden;
   position: relative;
@@ -170,7 +170,7 @@ p {
 }
 
 .win-btn:hover {
-  background-color: #1a5196;
+  background-color: #00ccff;
 }
 
 .win-btn:active {
