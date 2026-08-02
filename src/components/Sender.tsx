@@ -194,8 +194,14 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               const canvasSize = 300;
               const cellSize = canvasSize / totalSize;
 
-              canvas.width = canvasSize;
-              canvas.height = canvasSize;
+              const dpr = window.devicePixelRatio || 1;
+              canvas.width = canvasSize * dpr;
+              canvas.height = canvasSize * dpr;
+              canvas.style.width = `${canvasSize}px`;
+              canvas.style.height = `${canvasSize}px`;
+
+              ctx.scale(dpr, dpr);
+              ctx.imageSmoothingEnabled = false;
 
               ctx.fillStyle = '#05050a';
               ctx.fillRect(0, 0, canvasSize, canvasSize);
