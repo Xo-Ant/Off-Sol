@@ -211,17 +211,25 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               for (let row = 0; row < size; row++) {
                 for (let col = 0; col < size; col++) {
                   if (qr.modules.data[row * size + col]) {
-                    // Use a stable, pseudo-random color for each coordinate
                     const colorIndex = (row * 13 + col * 7) % colors.length;
                     ctx.fillStyle = colors[colorIndex];
-                    ctx.shadowBlur = 4;
+                    ctx.shadowBlur = cellSize * 0.6; // Scale glow based on cell size
                     ctx.shadowColor = ctx.fillStyle;
                     
-                    const x = Math.floor((col + margin) * cellSize);
-                    const y = Math.floor((row + margin) * cellSize);
-                    const w = Math.ceil(cellSize);
+                    const x = (col + margin) * cellSize;
+                    const y = (row + margin) * cellSize;
                     
-                    ctx.fillRect(x, y, w, w);
+                    // Create a gap (draw size is 75% of cell size)
+                    const drawSize = cellSize * 0.75;
+                    const offset = (cellSize - drawSize) / 2;
+                    
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                      ctx.roundRect(x + offset, y + offset, drawSize, drawSize, drawSize * 0.15);
+                    } else {
+                      ctx.rect(x + offset, y + offset, drawSize, drawSize);
+                    }
+                    ctx.fill();
                   }
                 }
               }
