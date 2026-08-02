@@ -195,37 +195,38 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               const cellSize = canvasSize / totalSize;
 
               const dpr = window.devicePixelRatio || 1;
-              canvas.width = canvasSize * dpr;
-              canvas.height = canvasSize * dpr;
+              const physSize = Math.floor(canvasSize * dpr);
+              
+              canvas.width = physSize;
+              canvas.height = physSize;
               canvas.style.width = `${canvasSize}px`;
               canvas.style.height = `${canvasSize}px`;
 
-              ctx.scale(dpr, dpr);
               ctx.imageSmoothingEnabled = false;
 
               ctx.fillStyle = '#05050a';
-              ctx.fillRect(0, 0, canvasSize, canvasSize);
+              ctx.fillRect(0, 0, physSize, physSize);
 
               const colors = ['#00f0ff', '#ff00ff', '#00ff00', '#ffff00', '#ff3300'];
+              const physCellSize = physSize / totalSize;
 
               for (let row = 0; row < size; row++) {
                 for (let col = 0; col < size; col++) {
                   if (qr.modules.data[row * size + col]) {
                     const colorIndex = (row * 13 + col * 7) % colors.length;
                     ctx.fillStyle = colors[colorIndex];
-                    ctx.shadowBlur = cellSize * 0.6; // Scale glow based on cell size
+                    ctx.shadowBlur = Math.floor(physCellSize * 0.4); 
                     ctx.shadowColor = ctx.fillStyle;
                     
-                    const x = (col + margin) * cellSize;
-                    const y = (row + margin) * cellSize;
+                    const x = Math.floor((col + margin) * physCellSize);
+                    const y = Math.floor((row + margin) * physCellSize);
                     
-                    // Create a gap (draw size is 75% of cell size)
-                    const drawSize = cellSize * 0.75;
-                    const offset = (cellSize - drawSize) / 2;
+                    const drawSize = Math.floor(physCellSize * 0.75);
+                    const offset = Math.floor((physCellSize - drawSize) / 2);
                     
                     ctx.beginPath();
                     if (ctx.roundRect) {
-                      ctx.roundRect(x + offset, y + offset, drawSize, drawSize, drawSize * 0.15);
+                      ctx.roundRect(x + offset, y + offset, drawSize, drawSize, Math.max(1, Math.floor(drawSize * 0.15)));
                     } else {
                       ctx.rect(x + offset, y + offset, drawSize, drawSize);
                     }
