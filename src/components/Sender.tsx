@@ -137,10 +137,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
     if (!encryptedData) return;
     const ur = UR.fromBuffer(Buffer.from(encryptedData));
     encoderRef.current = new UREncoder(ur, 150);
-    setPhase('qr_transition');
-    setTimeout(() => {
-      setPhase('camera_qr');
-    }, 1400);
+    setPhase('camera_qr');
   };
 
   const handleSelectGif = async (gif: MemeGif) => {
@@ -181,7 +178,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         if (!activeRef.current) return;
         requestAnimationFrame(drawLoop);
         
-        if (now - lastDraw < 100) return;
+        if (now - lastDraw < 150) return;
         lastDraw = now;
         
         if (encoderRef.current && canvasRef.current) {
@@ -208,7 +205,9 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               for (let row = 0; row < size; row++) {
                 for (let col = 0; col < size; col++) {
                   if (qr.modules.data[row * size + col]) {
-                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    // Use a stable, pseudo-random color for each coordinate
+                    const colorIndex = (row * 13 + col * 7) % colors.length;
+                    ctx.fillStyle = colors[colorIndex];
                     ctx.shadowBlur = 4;
                     ctx.shadowColor = ctx.fillStyle;
                     
@@ -238,9 +237,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   return (
     <div className="screen-container">
       <div className="media-pane">
-        {phase === 'qr_transition' ? (
-          <div className="qr-explode-text">OFF-SOL</div>
-        ) : phase === 'camera_qr' ? (
+        {phase === 'camera_qr' ? (
           <div className="qr-container">
             <canvas ref={canvasRef}></canvas>
           </div>

@@ -270,23 +270,3 @@ p {
   font-weight: 700;
   font-size: 16px;
 }
-
-/* Exploding QR Transition */
-@keyframes qr-explode {
-  0% { transform: scale(0.1); opacity: 0; filter: blur(10px); }
-  30% { transform: scale(1.2); opacity: 1; filter: blur(0px); }
-  60% { transform: scale(1); opacity: 1; filter: blur(0px); }
-  100% { transform: scale(10); opacity: 0; filter: blur(20px); display: none; }
-}
-
-.qr-explode-text {
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--pixel-primary);
-  text-shadow: 4px 4px 0px var(--pixel-accent);
-  animation: qr-explode 1.5s forwards cubic-bezier(0.25, 0.1, 0.25, 1);
-  position: absolute;
-  z-index: 10;
-  text-align: center;
-  width: 100%;
-}
