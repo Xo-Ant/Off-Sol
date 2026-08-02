@@ -8,7 +8,7 @@ const BITMAP = [
   " 111   1      1            1111    111   11111"
 ];
 
-const COLORS = ['#ff00ff', '#00ffff', '#00ff00', '#ffff00', '#ff4500', '#ff00aa'];
+const COLORS = ['#90EE90', '#39ff14', '#00ff41', '#4A6B2C', '#6b8e23'];
 
 export default function PixelLogo() {
   const pixels = useMemo(() => {

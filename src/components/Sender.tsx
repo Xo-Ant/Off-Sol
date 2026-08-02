@@ -206,7 +206,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               ctx.fillStyle = '#05050a';
               ctx.fillRect(0, 0, physSize, physSize);
 
-              const colors = ['#00f0ff', '#ff00ff', '#00ff00', '#ffff00', '#ff3300'];
+              const colors = ['#90EE90', '#39ff14', '#00ff41', '#4A6B2C', '#6b8e23'];
               const physCellSize = physSize / totalSize;
 
               for (let row = 0; row < size; row++) {
