@@ -22,6 +22,7 @@
     "bip39": "^3.1.0",
     "buffer": "^6.0.3",
     "ed25519-hd-key": "^2.0.0",
+    "jimp": "^1.6.1",
     "libsodium-wrappers": "^0.8.4",
     "localforage": "^1.10.0",
     "qrcode": "^1.5.4",
@@ -32,6 +33,7 @@
     "zxing-wasm": "^3.1.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.0",
     "@types/bs58": "^4.0.4",
     "@types/node": "^24.13.3",
