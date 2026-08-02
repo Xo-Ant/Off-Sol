@@ -7,7 +7,7 @@ import { decryptPayload } from '../lib/crypto';
 import { extractDataFromGif } from '../lib/gifManager';
 
 export default function Receiver({ onBack }: { onBack: () => void }) {
-  const { keypair, isOnline, setPendingTx, refreshState } = useWallet();
+  const { keypair, isOnline, setPendingTx, refreshState, rpcUrl } = useWallet();
   const [phase, setPhase] = useState<'select' | 'scan' | 'success'>('select');
   const [scanProgress, setScanProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -140,7 +140,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
   const processTransaction = async (rawTx: Uint8Array) => {
     if (isOnline) {
       try {
-        const conn = new Connection('https://api.devnet.solana.com');
+        const conn = new Connection(rpcUrl);
         const signature = await conn.sendRawTransaction(rawTx, { skipPreflight: true });
         console.log("Broadcasted:", signature);
         refreshState();

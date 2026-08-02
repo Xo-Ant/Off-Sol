@@ -4,7 +4,7 @@ import bs58 from 'bs58';
 import PixelLogo from './PixelLogo';
 
 export default function Dashboard({ onSend, onReceive }: { onSend: () => void, onReceive: () => void }) {
-  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout, mnemonic } = useWallet();
+  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout, mnemonic, network, setNetwork } = useWallet();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showSecurityPrompt, setShowSecurityPrompt] = useState(false);
@@ -49,6 +49,20 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
         </div>
         
         <div className="controls-pane">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, color: 'var(--pixel-accent)' }}>Network</h3>
+            <select 
+              className="win-input" 
+              style={{ width: 'auto', margin: 0, padding: '5px', fontSize: '14px', background: '#05050a', color: 'var(--pixel-accent)', border: '2px solid var(--pixel-accent)' }} 
+              value={network} 
+              onChange={(e) => setNetwork(e.target.value as any)}
+            >
+              <option value="mainnet-beta">Mainnet</option>
+              <option value="devnet">Devnet</option>
+              <option value="testnet">Testnet</option>
+            </select>
+          </div>
+
           <p><strong>Address:</strong><br /> <span style={{ fontSize: '12px', wordBreak: 'break-all' }}>{keypair.publicKey.toBase58()}</span></p>
           <p><strong>Balance:</strong> {balance} SOL</p>
 

@@ -6,6 +6,8 @@ import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
+export type NetworkType = 'mainnet-beta' | 'devnet' | 'testnet';
+
 export interface TokenBalance {
   mint: string;
   ata: string;
@@ -23,6 +25,9 @@ interface WalletContextType {
   pendingTx: Uint8Array | null;
   mnemonic: string | null;
   tokens: TokenBalance[];
+  network: NetworkType;
+  rpcUrl: string;
+  setNetwork: (n: NetworkType) => void;
   createWallet: () => { mnemonic: string, keypair: Keypair };
   importWalletBase58: (secretKeyBase58: string) => void;
   importWalletMnemonic: (mnemonic: string) => void;
@@ -49,6 +54,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [pendingTx, setPendingTxState] = useState<Uint8Array | null>(null);
   const [mnemonic, setMnemonicState] = useState<string | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
+  const [network, setNetworkState] = useState<NetworkType>('devnet');
+
+  const rpcUrl = `https://api.${network}.solana.com`;
+
+  const setNetwork = (n: NetworkType) => {
+    setNetworkState(n);
+    localStorage.setItem('offsol_network', n);
+    setNonceAccountPubKey(null);
+    setCurrentNonce(null);
+    setTokens([]);
+    setBalance(0);
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -67,11 +84,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const savedNonce = localStorage.getItem('offsol_nonce_pubkey');
+    const savedNetwork = localStorage.getItem('offsol_network') as NetworkType;
+    if (savedNetwork && ['mainnet-beta', 'devnet', 'testnet'].includes(savedNetwork)) {
+      setNetworkState(savedNetwork);
+    }
+  }, []); // Run only once
+
+  useEffect(() => {
+    const savedNonce = localStorage.getItem(`offsol_nonce_pubkey_${network}`);
     if (savedNonce) {
       setNonceAccountPubKey(new PublicKey(savedNonce));
+    } else {
+      setNonceAccountPubKey(null);
+      setCurrentNonce(null);
     }
+  }, [network]);
 
+  useEffect(() => {
     const savedPending = localStorage.getItem('offsol_pending_tx');
     if (savedPending) {
       setPendingTxState(bs58.decode(savedPending));
@@ -101,12 +130,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (keypair && isOnline) {
       refreshState();
     }
-  }, [keypair, isOnline, nonceAccountPubKey]);
+  }, [keypair, isOnline, nonceAccountPubKey, network]);
 
   useEffect(() => {
     // Auto broadcast pending tx when coming online
     if (isOnline && pendingTx) {
-      const conn = new Connection('https://api.devnet.solana.com');
+      const conn = new Connection(rpcUrl);
       conn.sendRawTransaction(pendingTx, { skipPreflight: true })
         .then(sig => {
           console.log("Pending transaction broadcasted!", sig);
@@ -123,7 +152,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const refreshState = async () => {
     if (!keypair || !isOnline) return;
-    const conn = new Connection('https://api.devnet.solana.com');
+    const conn = new Connection(rpcUrl);
     try {
       const bal = await conn.getBalance(keypair.publicKey);
       setBalance(bal / 1e9);
@@ -191,7 +220,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('offsol_secret');
-    localStorage.removeItem('offsol_nonce_pubkey');
+    localStorage.removeItem(`offsol_nonce_pubkey_${network}`);
     localStorage.removeItem('offsol_pending_tx');
     localStorage.removeItem('offsol_mnemonic');
     setKeypair(null);
@@ -206,7 +235,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const createNonceAccount = async () => {
     if (!keypair || !isOnline) throw new Error("Must be online and logged in.");
-    const conn = new Connection('https://api.devnet.solana.com', 'confirmed');
+    const conn = new Connection(rpcUrl, 'confirmed');
     
     const nonceAccount = Keypair.generate();
     const minimumAmount = await conn.getMinimumBalanceForRentExemption(NONCE_ACCOUNT_LENGTH);
@@ -224,7 +253,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     console.log("Nonce account created:", signature);
     
     setNonceAccountPubKey(nonceAccount.publicKey);
-    localStorage.setItem('offsol_nonce_pubkey', nonceAccount.publicKey.toBase58());
+    localStorage.setItem(`offsol_nonce_pubkey_${network}`, nonceAccount.publicKey.toBase58());
     await refreshState();
   };
 
@@ -239,7 +268,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider value={{
-      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx, mnemonic, tokens,
+      keypair, balance, nonceAccountPubKey, currentNonce, isOnline, pendingTx, mnemonic, tokens, network, rpcUrl, setNetwork,
       createWallet, importWalletBase58, importWalletMnemonic, logout, createNonceAccount, setPendingTx, refreshState
     }}>
       {children}
