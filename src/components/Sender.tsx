@@ -192,7 +192,6 @@ export default function Sender({ onBack }: { onBack: () => void }) {
               const margin = 2;
               const totalSize = size + 2 * margin;
               const canvasSize = 300;
-              const cellSize = canvasSize / totalSize;
 
               const dpr = window.devicePixelRatio || 1;
               const physSize = Math.floor(canvasSize * dpr);
