@@ -50,10 +50,10 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
         
         <div className="controls-pane">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3 style={{ margin: 0, color: 'var(--pixel-gameboy)' }}>Network</h3>
+            <h3 style={{ margin: 0, color: 'var(--pixel-military-text)' }}>Network</h3>
             <select 
               className="win-input" 
-              style={{ width: 'auto', margin: 0, padding: '5px', fontSize: '14px', background: '#05050a', color: 'var(--pixel-gameboy)', border: '2px solid var(--pixel-gameboy)' }} 
+              style={{ width: 'auto', margin: 0, padding: '5px', fontSize: '14px', background: '#05050a', color: 'var(--pixel-military-text)', border: '2px solid var(--pixel-military-bg)' }} 
               value={network} 
               onChange={(e) => setNetwork(e.target.value as any)}
             >
