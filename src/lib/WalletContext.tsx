@@ -88,6 +88,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (savedNetwork && ['mainnet-beta', 'devnet', 'testnet'].includes(savedNetwork)) {
       setNetworkState(savedNetwork);
     }
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []); // Run only once
 
   useEffect(() => {
@@ -119,11 +123,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         console.error("Invalid saved tokens");
       }
     }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
   useEffect(() => {
