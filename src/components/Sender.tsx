@@ -187,20 +187,40 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         if (encoderRef.current && canvasRef.current) {
           try {
             const part = encoderRef.current.nextPart();
-            await new Promise<void>((resolve, reject) => {
-              QRCode.toCanvas(canvasRef.current, part.toUpperCase(), {
-                width: 300,
-                margin: 2,
-                color: {
-                  dark: '#05050a',
-                  light: '#00f0ff'
-                },
-                errorCorrectionLevel: 'L'
-              }, (err) => {
-                if (err) reject(err);
-                else resolve();
-              });
-            });
+            const qr = QRCode.create(part.toUpperCase(), { errorCorrectionLevel: 'L' });
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              const size = qr.modules.size;
+              const margin = 2;
+              const totalSize = size + 2 * margin;
+              const canvasSize = 300;
+              const cellSize = canvasSize / totalSize;
+
+              canvas.width = canvasSize;
+              canvas.height = canvasSize;
+
+              ctx.fillStyle = '#05050a';
+              ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+              const colors = ['#00f0ff', '#ff00ff', '#00ff00', '#ffff00', '#ff3300'];
+
+              for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                  if (qr.modules.data[row * size + col]) {
+                    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = ctx.fillStyle;
+                    
+                    const x = Math.floor((col + margin) * cellSize);
+                    const y = Math.floor((row + margin) * cellSize);
+                    const w = Math.ceil(cellSize);
+                    
+                    ctx.fillRect(x, y, w, w);
+                  }
+                }
+              }
+            }
           } catch (err) {
             console.error("QR Code Generation Error:", err);
           }

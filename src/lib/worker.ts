@@ -17,7 +17,7 @@ ctx.onmessage = async (e: MessageEvent) => {
   const { id, buf, w, h } = e.data as { id: number; buf: ArrayBuffer; w: number; h: number };
   try {
     const img = new ImageData(new Uint8ClampedArray(buf), w, h);
-    const results = await readBarcodes(img, { formats: ["QRCode"], maxNumberOfSymbols: 1 });
+    const results = await readBarcodes(img, { formats: ["QRCode"], maxNumberOfSymbols: 1, tryInvert: true });
     const r = results.find((x) => x.isValid && x.bytes.length > 0);
     ctx.postMessage({ id, bytes: r ? r.bytes : null });
   } catch {
@@ -26,6 +26,6 @@ ctx.onmessage = async (e: MessageEvent) => {
 };
 
 // warm the WASM so the first real frame doesn't pay instantiation
-void readBarcodes(new ImageData(8, 8), { formats: ["QRCode"] })
+void readBarcodes(new ImageData(8, 8), { formats: ["QRCode"], tryInvert: true })
   .catch(() => undefined)
   .then(() => ctx.postMessage({ id: -1, bytes: null }));
