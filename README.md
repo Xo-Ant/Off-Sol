@@ -1,7 +1,5 @@
 # Off-Sol: Unbreakable Offline Solana Wallet
 
-<img src="./resources/banner.jpg" alt="Off-Sol Banner" width="100%" />
-
 ![Solana](https://img.shields.io/badge/Solana-362D59?style=for-the-badge&logo=solana&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Capacitor](https://img.shields.io/badge/Capacitor-119EFF?style=for-the-badge&logo=Capacitor&logoColor=white)
@@ -75,7 +73,7 @@ flowchart TD
         Broadcaster["Online Broadcaster"]:::online
         
         Vault -->|"Optical QR (One-Way Air-Gap)"| Broadcaster:::safe
-        Broadcaster -.x|"Malware Cannot Travel via Light"| Vault
+        Broadcaster -.->|"Malware Cannot Travel via Light"| Vault
     end
 
     Standard_Methods ~~~ Off_Sol_Method
