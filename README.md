@@ -48,7 +48,7 @@ sequenceDiagram
 
 ## 📡 Off-Sol vs Standard Hardware Wallets
 
-Off-Sol relies on a strict "Optical Air-Gap" to ensure your private keys are completely isolated. To understand why this is necessary, here is a visual comparison between how standard hardware wallets connect to the internet versus how Off-Sol operates.
+Off-Sol relies on strict isolation protocols to ensure your private keys are never exposed. To understand why this is necessary, here is a visual comparison between how standard hardware wallets connect to the internet versus how Off-Sol operates in both Optical and Offline-to-Offline modes.
 
 ```mermaid
 flowchart TD
@@ -67,16 +67,26 @@ flowchart TD
         HW <-->|"NFC (Proximity Skimming Risk)"| PC
     end
 
-    subgraph Off_Sol_Method ["🛡️ OFF-SOL PROTOCOL (Zero Connectivity)"]
+    subgraph Off_Sol_Method ["🛡️ OFF-SOL: OPTICAL AIR-GAP"]
         direction LR
-        Vault["Off-Sol Signer (Wi-Fi/BT Disabled)"]:::offline
+        Vault["Off-Sol Signer (Offline)"]:::offline
         Broadcaster["Online Broadcaster"]:::online
         
-        Vault -->|"Optical QR (One-Way Air-Gap)"| Broadcaster:::safe
+        Vault -->|"Optical QR (One-Way)"| Broadcaster:::safe
         Broadcaster -.->|"Malware Cannot Travel via Light"| Vault
     end
 
+    subgraph Off_Sol_Stego ["🪖 OFF-SOL: OFFLINE-TO-OFFLINE (The Bunker Scenario)"]
+        direction LR
+        Vault1["Sender Off-Sol (Offline)"]:::offline
+        Vault2["Receiver Off-Sol (Offline)"]:::offline
+        
+        Vault1 -->|"Encrypted Meme-GIF via Bluetooth/NFC"| Vault2:::offline
+        Vault2 -.->|"Saved as Pending until eventually Online"| Vault2
+    end
+
     Standard_Methods ~~~ Off_Sol_Method
+    Off-Sol_Method ~~~ Off_Sol_Stego
 ```
 
 ### Why Other Methods Carry Risks:
