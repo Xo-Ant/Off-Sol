@@ -1,5 +1,7 @@
 # Off-Sol: Unbreakable Offline Solana Wallet
 
+<img src="./resources/banner.jpg" alt="Off-Sol Banner" width="100%" />
+
 ![Solana](https://img.shields.io/badge/Solana-362D59?style=for-the-badge&logo=solana&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Capacitor](https://img.shields.io/badge/Capacitor-119EFF?style=for-the-badge&logo=Capacitor&logoColor=white)
@@ -43,6 +45,50 @@ sequenceDiagram
     Crypto->>Receiver: Raw Transaction Restored!
     Receiver->>Solana Network: Broadcast (When Online)
 ```
+
+---
+
+## 📡 Off-Sol vs Standard Hardware Wallets
+
+Off-Sol relies on a strict "Optical Air-Gap" to ensure your private keys are completely isolated. To understand why this is necessary, here is a visual comparison between how standard hardware wallets connect to the internet versus how Off-Sol operates.
+
+```mermaid
+flowchart TD
+    classDef offline fill:#1a2610,stroke:#39ff14,stroke-width:2px,color:#90EE90;
+    classDef online fill:#05050a,stroke:#00f0ff,stroke-width:2px,color:#00f0ff;
+    classDef danger fill:#2a0000,stroke:#ff0000,stroke-width:2px,color:#ff5555;
+    classDef safe fill:none,stroke:#6b8e23,stroke-width:2px,stroke-dasharray: 5 5,color:#39ff14;
+
+    subgraph Standard_Methods ["⚠️ STANDARD HARDWARE WALLETS"]
+        direction LR
+        HW["Ledger / Trezor / Tangem"]:::offline
+        PC["Internet Connected PC/Phone"]:::online
+        
+        HW <-->|"USB Cable (Data Transfer Risk)"| PC
+        HW <-->|"Bluetooth (Wireless Intercept Risk)"| PC
+        HW <-->|"NFC (Proximity Skimming Risk)"| PC
+    end
+
+    subgraph Off_Sol_Method ["🛡️ OFF-SOL PROTOCOL (Zero Connectivity)"]
+        direction LR
+        Vault["Off-Sol Signer (Wi-Fi/BT Disabled)"]:::offline
+        Broadcaster["Online Broadcaster"]:::online
+        
+        Vault -->|"Optical QR (One-Way Air-Gap)"| Broadcaster:::safe
+        Broadcaster -.x|"Malware Cannot Travel via Light"| Vault
+    end
+
+    Standard_Methods ~~~ Off_Sol_Method
+```
+
+### Why Other Methods Carry Risks:
+1. **USB Cables:** They establish a two-way physical data channel. Sophisticated malware on a compromised PC can attempt to send malicious payloads directly to the hardware device.
+2. **Bluetooth:** Wireless signals can be intercepted, spoofed, or subjected to "Man-in-the-Middle" (MitM) attacks by devices in proximity.
+3. **NFC:** While requiring close contact, it still acts as a two-way communication protocol susceptible to specialized skimming hardware or rogue applications on the mobile device.
+
+### The Off-Sol Advantage:
+- **True Air-Gap:** Off-Sol uses only your device's screen and camera. There is no physical connection, no wireless radio signal, and no two-way data handshake.
+- **One-Way Transmission:** The transaction data flows strictly in one direction: from the offline device (screen) to the online device (camera). It is physically impossible for the internet-connected device to send a virus "back" through the camera lens.
 
 ---
 
