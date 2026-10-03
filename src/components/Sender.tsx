@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '../lib/WalletContext';
-import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { parseUnits } from '../lib/amount';
 import { createAssociatedTokenAccountIdempotentInstruction, createTransferInstruction, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import QRCode from 'qrcode';
 import { UR, UREncoder } from '@ngraveio/bc-ur';
@@ -9,8 +10,13 @@ import { getCustomGifs, saveCustomGif, injectDataToGif } from '../lib/gifManager
 import type { MemeGif } from '../lib/gifManager';
 import { shareGifBlob } from '../lib/capacitorShare';
 
+// 5000 lamports per signature; keep a small margin for priority fees.
+const FEE_RESERVE_LAMPORTS = 10_000n;
+// Rent-exempt minimum for a 165-byte SPL token account.
+const ATA_RENT_LAMPORTS = 2_039_280n;
+
 export default function Sender({ onBack }: { onBack: () => void }) {
-  const { keypair, balance, isOnline, nonceAccountPubKey, currentNonce, tokens } = useWallet();
+  const { keypair, balance, balanceLamports, isOnline, nonceAccountPubKey, currentNonce, nonceAvailable, markNonceUsed, tokens, rpcUrl } = useWallet();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [asset, setAsset] = useState('SOL');
@@ -45,88 +51,77 @@ export default function Sender({ onBack }: { onBack: () => void }) {
   const handlePrepareTx = async () => {
     if (!keypair) return;
     setError('');
-    
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError("Amount must be greater than 0");
-      return;
-    }
-    
-    if (asset === 'SOL') {
-      if (parsedAmount > balance) {
-        setError("Insufficient SOL balance.");
-        return;
-      }
-    } else {
-      const selectedToken = tokens.find(t => t.mint === asset);
-      if (!selectedToken || parsedAmount > selectedToken.uiAmount) {
-        setError("Insufficient token balance.");
-        return;
-      }
-    }
 
     try {
-      const toPubkey = new PublicKey(recipient);
+      let toPubkey: PublicKey;
+      try {
+        toPubkey = new PublicKey(recipient.trim());
+      } catch {
+        throw new Error("Invalid recipient address.");
+      }
+      if (toPubkey.equals(keypair.publicKey)) {
+        throw new Error("You cannot send to your own address.");
+      }
+
+      const useNonce = !isOnline;
+      if (useNonce && (!nonceAccountPubKey || !currentNonce)) {
+        throw new Error("Durable Nonce is not initialized. Go online once and create a nonce account to sign offline.");
+      }
+      if (useNonce && !nonceAvailable) {
+        throw new Error("Your offline nonce was already used for a previous transaction. Go online so it can refresh before signing another offline transaction.");
+      }
+
+      const conn = isOnline ? new Connection(rpcUrl, 'confirmed') : null;
       const tx = new Transaction();
+      tx.feePayer = keypair.publicKey;
+
+      if (useNonce) {
+        tx.recentBlockhash = currentNonce!;
+        tx.add(SystemProgram.nonceAdvance({ noncePubkey: nonceAccountPubKey!, authorizedPubkey: keypair.publicKey }));
+      } else {
+        tx.recentBlockhash = (await conn!.getLatestBlockhash()).blockhash;
+      }
 
       if (asset === 'SOL') {
-        const lamports = parsedAmount * LAMPORTS_PER_SOL;
-        if (isOnline) {
-          const conn = new Connection('https://api.devnet.solana.com');
-          const { blockhash } = await conn.getLatestBlockhash();
-          tx.recentBlockhash = blockhash;
-          tx.feePayer = keypair.publicKey;
-          tx.add(SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports }));
-        } else {
-          if (!nonceAccountPubKey || !currentNonce) {
-            throw new Error("Durable Nonce is not initialized. Cannot sign offline.");
-          }
-          tx.recentBlockhash = currentNonce;
-          tx.feePayer = keypair.publicKey;
-          tx.add(
-            SystemProgram.nonceAdvance({ noncePubkey: nonceAccountPubKey, authorizedPubkey: keypair.publicKey }),
-            SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports })
-          );
+        const lamports = parseUnits(amount, 9);
+        if (lamports + FEE_RESERVE_LAMPORTS > balanceLamports) {
+          throw new Error("Insufficient SOL balance (amount + network fee).");
         }
+        tx.add(SystemProgram.transfer({ fromPubkey: keypair.publicKey, toPubkey, lamports }));
       } else {
         const selectedToken = tokens.find(t => t.mint === asset);
         if (!selectedToken) throw new Error("Token not found");
+        const rawAmount = parseUnits(amount, selectedToken.decimals);
+        if (rawAmount > BigInt(selectedToken.amount)) {
+          throw new Error("Insufficient token balance.");
+        }
 
         const mintPubkey = new PublicKey(selectedToken.mint);
         const sourceAta = new PublicKey(selectedToken.ata);
         const destAta = getAssociatedTokenAddressSync(mintPubkey, toPubkey, false);
-        const rawAmount = BigInt(Math.floor(parsedAmount * (10 ** selectedToken.decimals)));
 
-        if (isOnline) {
-          const conn = new Connection('https://api.devnet.solana.com');
-          const { blockhash } = await conn.getLatestBlockhash();
-          tx.recentBlockhash = blockhash;
-          tx.feePayer = keypair.publicKey;
-          tx.add(
-            createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, toPubkey, mintPubkey),
-            createTransferInstruction(sourceAta, destAta, keypair.publicKey, rawAmount)
-          );
-        } else {
-          if (!nonceAccountPubKey || !currentNonce) {
-            throw new Error("Durable Nonce is not initialized. Cannot sign offline.");
-          }
-          tx.recentBlockhash = currentNonce;
-          tx.feePayer = keypair.publicKey;
-          tx.add(
-            SystemProgram.nonceAdvance({ noncePubkey: nonceAccountPubKey, authorizedPubkey: keypair.publicKey }),
-            createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, toPubkey, mintPubkey),
-            createTransferInstruction(sourceAta, destAta, keypair.publicKey, rawAmount)
-          );
+        // If the recipient has no token account yet, we pay its rent.
+        // Offline we cannot check, so we assume the worst case.
+        const destExists = conn ? (await conn.getAccountInfo(destAta)) !== null : false;
+        const solNeeded = FEE_RESERVE_LAMPORTS + (destExists ? 0n : ATA_RENT_LAMPORTS);
+        if (solNeeded > balanceLamports) {
+          throw new Error("Not enough SOL to pay the network fee and the recipient's token account rent.");
         }
+
+        tx.add(
+          createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, toPubkey, mintPubkey),
+          createTransferInstruction(sourceAta, destAta, keypair.publicKey, rawAmount)
+        );
       }
 
       tx.sign(keypair);
-      const rawTx = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-      
+      const rawTx = tx.serialize();
+
       const encrypted = await encryptForReceiver(keypair.secretKey, toPubkey, rawTx);
+      if (useNonce) markNonceUsed();
       setEncryptedData(encrypted);
       setRawTxData(rawTx);
-      
+
       setPhase('method_select');
     } catch (e: any) {
       setError(e.message);
@@ -159,8 +154,8 @@ export default function Sender({ onBack }: { onBack: () => void }) {
     setIsBroadcasting(true);
     setError('');
     try {
-      const conn = new Connection('https://api.devnet.solana.com');
-      const signature = await conn.sendRawTransaction(rawTxData, { skipPreflight: true });
+      const conn = new Connection(rpcUrl, 'confirmed');
+      const signature = await conn.sendRawTransaction(rawTxData, { skipPreflight: false });
       console.log("Broadcasted:", signature);
       setPhase('success');
     } catch (e: any) {
@@ -348,7 +343,7 @@ export default function Sender({ onBack }: { onBack: () => void }) {
         {phase === 'success' && (
           <div className="text-center flex-col">
             <h2 style={{ color: '#00cc00', margin: '10px 0' }}>SUCCESS</h2>
-            <p>Transaction broadcasted directly to the network!</p>
+            <p>Transaction sent to the network. It may take a few seconds to confirm.</p>
             <button className="win-btn" style={{ width: '100%', marginTop: '15px' }} onClick={onBack}>OK</button>
           </div>
         )}
