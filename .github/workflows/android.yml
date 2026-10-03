@@ -40,18 +40,47 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
+    # With the OFFSOL_KEYSTORE_BASE64 / OFFSOL_KEYSTORE_PASSWORD secrets set, build a
+    # release APK signed with the permanent key. Otherwise fall back to a debug build.
     - name: Build APK
-      run: cd android && ./gradlew assembleDebug
+      env:
+        OFFSOL_KEYSTORE_BASE64: ${{ secrets.OFFSOL_KEYSTORE_BASE64 }}
+        OFFSOL_KEYSTORE_PASSWORD: ${{ secrets.OFFSOL_KEYSTORE_PASSWORD }}
+      run: |
+        if [ -n "$OFFSOL_KEYSTORE_BASE64" ]; then
+          echo "$OFFSOL_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/offsol-release.p12"
+          export OFFSOL_KEYSTORE_FILE="$RUNNER_TEMP/offsol-release.p12"
+          (cd android && ./gradlew assembleRelease)
+          cp android/app/build/outputs/apk/release/app-release.apk Off-Sol.apk
+          rm -f "$RUNNER_TEMP/offsol-release.p12"
+          echo "APK_SIGNING=release" >> "$GITHUB_ENV"
+        else
+          echo "::warning::Release keystore secrets not set; building a debug-signed APK."
+          (cd android && ./gradlew assembleDebug)
+          cp android/app/build/outputs/apk/debug/app-debug.apk Off-Sol.apk
+          echo "APK_SIGNING=debug" >> "$GITHUB_ENV"
+        fi
+
+    - name: Verify APK signature
+      run: |
+        APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+        "$APKSIGNER" verify --verbose --print-certs Off-Sol.apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: Off-Sol-APK
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        path: Off-Sol.apk
+
+    - name: Refuse debug-signed stable releases
+      if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') && env.APK_SIGNING != 'release'
+      run: |
+        echo "::error::Stable tag ${GITHUB_REF_NAME} needs the release keystore secrets (OFFSOL_KEYSTORE_BASE64, OFFSOL_KEYSTORE_PASSWORD)."
+        exit 1
 
     - name: Rename APK for release
       if: startsWith(github.ref, 'refs/tags/v')
-      run: cp android/app/build/outputs/apk/debug/app-debug.apk "Off-Sol-${GITHUB_REF_NAME}.apk"
+      run: cp Off-Sol.apk "Off-Sol-${GITHUB_REF_NAME}.apk"
 
     - name: Publish GitHub Release
       if: startsWith(github.ref, 'refs/tags/v')
@@ -62,5 +91,5 @@ jobs:
         prerelease: ${{ contains(github.ref_name, '-') }}
         generate_release_notes: true
         body: |
-          Debug-signed APK built by CI from ${{ github.sha }}.
+          APK built by CI from ${{ github.sha }} (signing: ${{ env.APK_SIGNING }}).
           Install: download the .apk on your Android phone and allow "install from unknown sources".
