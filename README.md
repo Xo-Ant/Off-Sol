@@ -44,6 +44,14 @@ sequenceDiagram
     Receiver->>Solana Network: Broadcast (When Online)
 ```
 
+
+## ⚠️ Important Security Notes
+
+- **Keys are encrypted at rest.** Your private key and recovery phrase are stored only in encrypted form (AES-256-GCM, key derived from your password with PBKDF2-SHA256, 600k iterations). Off-Sol cannot recover a forgotten password; keep your 12 words or private key backed up offline.
+- **An offline payment is not final until it is confirmed on-chain.** A signed transaction is a promise, not a settlement. Until the receiver broadcasts it, the sender can still spend the same funds elsewhere. Only treat a payment as received once it shows up on the network.
+- **One offline transaction per nonce.** Each durable nonce can back exactly one offline-signed transaction. After using it, go online once so the nonce can refresh.
+- **The GIF method hides data at the end of the file**, it does not make it undetectable. Some messaging apps re-encode GIFs, which removes the hidden data; send the file as a document if that happens.
+
 ---
 
 ## 📡 Off-Sol vs Standard Hardware Wallets

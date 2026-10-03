@@ -4,14 +4,17 @@ import Dashboard from './components/Dashboard';
 import Sender from './components/Sender';
 import Receiver from './components/Receiver';
 import Login from './components/Login';
+import Unlock from './components/Unlock';
 import './App.css';
 
 
 function AppContent() {
-  const { keypair, isOnline, pendingTx } = useWallet();
+  const { keypair, isOnline, pendingTxs, vaultExists, needsMigration } = useWallet();
   const [mode, setMode] = useState<'dashboard' | 'send' | 'receive'>('dashboard');
 
   if (!keypair) {
+    if (needsMigration) return <Unlock migrate />;
+    if (vaultExists) return <Unlock migrate={false} />;
     return <Login />;
   }
 
@@ -19,7 +22,7 @@ function AppContent() {
     <div className="app-container">
       <header className="app-header" style={{ padding: '10px', display: 'flex', justifyContent: 'flex-end', position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-           {pendingTx && <span className="badge badge-offline" style={{ background: '#ffa500' }}>1 Pending Tx</span>}
+           {pendingTxs.length > 0 && <span className="badge badge-offline" style={{ background: '#ffa500' }}>{pendingTxs.length} Pending Tx</span>}
            <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`}>
              {isOnline ? 'Online' : 'Offline'}
            </span>

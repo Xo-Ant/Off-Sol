@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWallet } from '../lib/WalletContext';
 import { Connection } from '@solana/web3.js';
+import { inspectIncomingTx } from '../lib/txInspect';
+import type { IncomingTransfer } from '../lib/txInspect';
+import { formatUnits } from '../lib/amount';
 import { URDecoder } from '@ngraveio/bc-ur';
 import WorkerScript from '../lib/worker?worker';
 import { decryptPayload } from '../lib/crypto';
 import { extractDataFromGif } from '../lib/gifManager';
 
 export default function Receiver({ onBack }: { onBack: () => void }) {
-  const { keypair, isOnline, setPendingTx, refreshState, rpcUrl } = useWallet();
-  const [phase, setPhase] = useState<'select' | 'scan' | 'success'>('select');
+  const { keypair, isOnline, addPendingTx, refreshState, rpcUrl } = useWallet();
+  const [phase, setPhase] = useState<'select' | 'scan' | 'confirm' | 'success'>('select');
+  const [incoming, setIncoming] = useState<{ raw: Uint8Array; info: IncomingTransfer } | null>(null);
+  const [wasBroadcast, setWasBroadcast] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   
@@ -137,21 +143,41 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
     }
   };
 
+  // Step 1: decode and verify what we received, then ask the user to confirm.
   const processTransaction = async (rawTx: Uint8Array) => {
+    if (!keypair) return;
+    try {
+      const info = inspectIncomingTx(rawTx, keypair.publicKey);
+      setIncoming({ raw: rawTx, info });
+      setPhase('confirm');
+    } catch (e: any) {
+      setErrorMsg("Rejected: " + e.message);
+      setPhase('select');
+    }
+  };
+
+  // Step 2: broadcast now if online, otherwise queue it.
+  const acceptTransaction = async () => {
+    if (!incoming) return;
+    setBusy(true);
+    setErrorMsg('');
     if (isOnline) {
       try {
-        const conn = new Connection(rpcUrl);
-        const signature = await conn.sendRawTransaction(rawTx, { skipPreflight: true });
+        const conn = new Connection(rpcUrl, 'confirmed');
+        const signature = await conn.sendRawTransaction(incoming.raw, { skipPreflight: false });
         console.log("Broadcasted:", signature);
         refreshState();
+        setWasBroadcast(true);
         setPhase('success');
       } catch (e: any) {
         setErrorMsg("Broadcast failed: " + e.message);
       }
     } else {
-      setPendingTx(rawTx);
+      addPendingTx(incoming.raw);
+      setWasBroadcast(false);
       setPhase('success');
     }
+    setBusy(false);
   };
 
   const stopCamera = () => {
@@ -172,7 +198,7 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
           </div>
         ) : phase === 'success' ? (
           <div className="media-placeholder" style={{ color: '#00cc00' }}>
-            SUCCESS!
+            {wasBroadcast ? 'SENT' : 'QUEUED'}
           </div>
         ) : (
           <div className="media-placeholder">
@@ -212,13 +238,34 @@ export default function Receiver({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
+        {phase === 'confirm' && incoming && (
+          <div className="flex-col">
+            <h3>Incoming Payment</h3>
+            <p style={{ fontSize: '14px' }}>
+              <strong>Amount:</strong>{' '}
+              {incoming.info.kind === 'SOL'
+                ? `${formatUnits(incoming.info.amount, 9)} SOL`
+                : `${incoming.info.amount.toString()} raw units of token ${incoming.info.mint?.slice(0, 6)}...`}
+            </p>
+            <p style={{ fontSize: '12px', wordBreak: 'break-all' }}><strong>From:</strong> {incoming.info.from}</p>
+            <div className="win-error-box" style={{ fontSize: '12px' }}>
+              This payment is NOT final until it is confirmed on the network. The sender could still
+              spend these funds elsewhere before your transaction is broadcast.
+            </div>
+            <button className="win-btn" style={{ width: '100%' }} onClick={acceptTransaction} disabled={busy}>
+              {busy ? 'Working...' : (isOnline ? 'Broadcast Now' : 'Save to Pending Queue')}
+            </button>
+            <button className="win-btn" style={{ width: '100%', backgroundColor: '#555' }} onClick={() => { setIncoming(null); setPhase('select'); }}>Discard</button>
+          </div>
+        )}
+
         {phase === 'success' && (
           <div className="text-center flex-col">
-            <h2 style={{ color: '#00cc00', margin: '10px 0' }}>SUCCESS</h2>
+            <h2 style={{ color: '#00cc00', margin: '10px 0' }}>{wasBroadcast ? 'SENT' : 'QUEUED'}</h2>
             <p>
-              {isOnline 
-                ? "Transaction broadcasted to network!" 
-                : "Transaction saved as Pending! It will broadcast when online."}
+              {wasBroadcast
+                ? "Transaction sent to the network. Check your balance in a moment to confirm it landed."
+                : "Saved to the pending queue. It will be broadcast automatically when you are online. Until then the payment is not guaranteed."}
             </p>
             <button className="win-btn" style={{ width: '100%', marginTop: '15px' }} onClick={onBack}>OK</button>
           </div>

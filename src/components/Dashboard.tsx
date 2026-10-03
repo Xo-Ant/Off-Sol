@@ -4,7 +4,7 @@ import bs58 from 'bs58';
 import PixelLogo from './PixelLogo';
 
 export default function Dashboard({ onSend, onReceive }: { onSend: () => void, onReceive: () => void }) {
-  const { keypair, balance, nonceAccountPubKey, currentNonce, isOnline, createNonceAccount, logout, mnemonic, network, setNetwork } = useWallet();
+  const { keypair, balance, nonceAccountPubKey, currentNonce, nonceAvailable, isOnline, createNonceAccount, logout, lock, mnemonic, network, setNetwork } = useWallet();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showSecurityPrompt, setShowSecurityPrompt] = useState(false);
@@ -73,6 +73,11 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
             <div style={{ fontSize: '14px', marginBottom: '15px' }}>
               <p><strong>Nonce Account:</strong><br/>{nonceAccountPubKey.toBase58().substring(0, 15)}...</p>
               <p><strong>Current Nonce:</strong><br/>{currentNonce || 'Loading...'}</p>
+              <p style={{ fontSize: '13px', color: nonceAvailable ? '#39ff14' : '#ffa500' }}>
+                {nonceAvailable
+                  ? 'Offline signing: READY (1 transaction)'
+                  : 'Offline signing: USED. Go online to refresh the nonce.'}
+              </p>
               <p style={{ color: '#00cc00' }}>Ready for offline transfers.</p>
             </div>
           ) : (
@@ -94,6 +99,9 @@ export default function Dashboard({ onSend, onReceive }: { onSend: () => void, o
           <div className="text-center mt-2">
             <button className="win-btn" onClick={handleExportClick} style={{ width: '100%' }}>
               {showExport ? 'Hide Keys & Mnemonic' : 'Export Keys & Mnemonic'}
+            </button>
+            <button className="win-btn" onClick={lock} style={{ width: '100%', marginTop: '10px' }}>
+              Lock
             </button>
             <button className="win-btn" onClick={() => setShowLogoutConfirm(true)} style={{ width: '100%', marginTop: '10px' }}>
               Logout
