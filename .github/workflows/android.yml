@@ -3,6 +3,8 @@ name: Build Android APK
 on:
   push:
     branches: [ "main" ]
+    # Pushing a tag like v1.0.0 also publishes the APK as a GitHub Release.
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -10,6 +12,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to create releases on tag pushes
     steps:
     - uses: actions/checkout@v5
 
@@ -44,3 +48,19 @@ jobs:
       with:
         name: Off-Sol-APK
         path: android/app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Rename APK for release
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: cp android/app/build/outputs/apk/debug/app-debug.apk "Off-Sol-${GITHUB_REF_NAME}.apk"
+
+    - name: Publish GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: Off-Sol-${{ github.ref_name }}.apk
+        # Tags like v1.0.0-beta.1 are marked as pre-releases.
+        prerelease: ${{ contains(github.ref_name, '-') }}
+        generate_release_notes: true
+        body: |
+          Debug-signed APK built by CI from ${{ github.sha }}.
+          Install: download the .apk on your Android phone and allow "install from unknown sources".
