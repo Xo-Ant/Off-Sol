@@ -16,8 +16,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing comes from the environment (set by CI from repository secrets).
+    // Without OFFSOL_KEYSTORE_FILE the release build is left unsigned.
+    def releaseKeystore = System.getenv("OFFSOL_KEYSTORE_FILE")
+    signingConfigs {
+        if (releaseKeystore) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv("OFFSOL_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("OFFSOL_KEY_ALIAS") ?: "offsol"
+                keyPassword System.getenv("OFFSOL_KEYSTORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
